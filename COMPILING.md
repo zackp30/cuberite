@@ -138,3 +138,9 @@ When cross-compiling for another computer it is important to set cross compiling
 to your cmake command.
 
 Note that cross-compilation is probably broken at this moment, since the build requires running an executable that it has built, as part of the build process.
+
+## OpenCL support ##
+
+To compile with openCL support you need the openCL headers, openGl headers and the openCL driver.
+
+On ubuntu the packages are: opencl-headers, mesa-common-dev and ocl-icd-opencl1. You will also need at least one openCL driver.

@@ -11,4 +11,4 @@ file(GLOB SOURCE
 
 add_library(Generating ${SOURCE})
 
-target_link_libraries(Generating OSSupport iniFile Blocks)
+target_link_libraries(Generating OSSupport iniFile Blocks OpenCL)
