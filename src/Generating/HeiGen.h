@@ -158,6 +158,9 @@ class cHeiGenBiomal :
 {
 public:
 	cHeiGenBiomal(int a_Seed, cBiomeGen & a_BiomeGen) :
+		#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+		m_Seed(a_Seed),
+		#endif
 		m_Noise(a_Seed),
 		m_BiomeGen(a_BiomeGen)
 	{
@@ -177,9 +180,21 @@ protected:
 		float m_HeightFreq2, m_HeightAmp2;
 		float m_HeightFreq3, m_HeightAmp3;
 		float m_BaseHeight;
-	} ;
+	};
+
 	static const sGenParam m_GenParam[256];
 	
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+
+		int m_Seed;
+
+		cl::Context m_context;
+		cl::CommandQueue m_queue;
+		cl::Program m_program;
+		cl::Buffer m_GenParamBuffer;
+		bool m_enabled;
+	#endif
+
 	// cTerrainHeightGen overrides:
 	virtual void GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMap & a_HeightMap) override;
 	virtual void InitializeHeightGen(cIniFile & a_IniFile) override;

@@ -104,5 +104,5 @@ __kernel void GenHeightMap(int a_Seed, HeiGenState a_State, int a_ChunkX, int a_
 	{
 		hei = 250;
 	}
-	a_HeightMap[x+ 16 * z] = hei;
+	a_HeightMap[x + 16 * z] = hei;
 }

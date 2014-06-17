@@ -286,7 +286,7 @@ cHeiGenClassic::cHeiGenClassic(int a_Seed) :
 	if (success != CL_SUCCESS)
 	{
 		LOGWARNING("Error compiling openCL shader: %d, falling back", success);
-		if (success = CL_BUILD_PROGRAM_FAILURE)
+		if (success == CL_BUILD_PROGRAM_FAILURE)
 		{
 			AString build_log;
 			m_program.getBuildInfo(devices[0],	CL_PROGRAM_BUILD_LOG, &build_log);
@@ -563,6 +563,42 @@ void cHeiGenBiomal::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMa
 		}  // for x
 	}  // for z
 	
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	if (m_enabled)
+	{
+		cl::Kernel kernel(m_program, "GenHeightMap");
+		
+		cl::Buffer HeightMapBuffer(m_context, CL_MEM_WRITE_ONLY, sizeof(cChunkDef::HeightMap));
+		cl::Buffer BiomeBuffer(m_context, CL_MEM_READ_ONLY, sizeof(BiomeNeighbors));
+
+		cl::Event BiomeWriteEvent;
+
+		m_queue.enqueueWriteBuffer(BiomeBuffer,CL_FALSE,0, sizeof(BiomeNeighbors), Biomes, NULL, &BiomeWriteEvent);
+
+		kernel.setArg(0, m_Seed);
+		kernel.setArg(1, a_ChunkX);
+		kernel.setArg(2, a_ChunkZ);
+		kernel.setArg(3, HeightMapBuffer);
+		kernel.setArg(4, BiomeBuffer);
+		kernel.setArg(5, m_GenParamBuffer);
+		
+		cl::Event kernelevent, readevent; 
+		std::vector<cl::Event> kernelDependentEvents;
+		kernelDependentEvents.push_back(BiomeWriteEvent);
+		m_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange,&kernelDependentEvents, &kernelevent);
+		
+		std::vector<cl::Event> ReadDependentEvents;
+		ReadDependentEvents.push_back(kernelevent);
+		m_queue.enqueueReadBuffer(HeightMapBuffer, CL_FALSE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap, &ReadDependentEvents, &readevent);
+		
+		readevent.wait();
+		
+		return;
+	}
+	else
+	{
+#endif
+
 	/*
 	_X 2013_04_22:
 	There's no point in precalculating the entire perlin noise arrays, too many values are calculated uselessly,
@@ -604,6 +640,9 @@ void cHeiGenBiomal::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMa
 		}  // for x
 	}
 	//*/
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	}
+#endif
 }
 
 
@@ -613,6 +652,68 @@ void cHeiGenBiomal::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMa
 void cHeiGenBiomal::InitializeHeightGen(cIniFile & a_IniFile)
 {
 	// No user-settable params
+
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+
+	#ifdef USE_OPENCL_CPU
+		int deviceType = CL_DEVICE_TYPE_CPU;
+	#endif
+
+	#ifdef USE_OPENCL_GPU
+		int deviceType = CL_DEVICE_TYPE_GPU;
+	#endif
+
+	std::vector< cl::Platform > platformList;
+    cl::Platform::get(&platformList);
+	if (platformList.size() == 0)
+	{
+		LOG("Could not find a platform, falling back to c++ mode");
+		m_enabled = false;
+		return;
+	}
+
+	m_enabled = true;
+
+	cl_context_properties cprops[3] = 
+		{CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[0])(), 0};
+	 
+	m_context = cl::Context(deviceType, cprops);
+		
+	std::vector<cl::Device> devices = m_context.getInfo<CL_CONTEXT_DEVICES>();
+
+	#define PROFILING 1
+
+	#ifdef PROFILING
+		m_queue = cl::CommandQueue(m_context, devices[0], CL_QUEUE_PROFILING_ENABLE);
+	#else
+		m_queue = cl::CommandQueue(m_context, devices[0], 0);
+	#endif
+	
+	AString prog = cFile::ReadWholeFile("Shaders/HeiGenBiomal.cl");
+
+	cl::Program::Sources source( 1, std::make_pair(prog.c_str(),
+							prog.length() + 1));
+	m_program = cl::Program(m_context, source);
+	
+	cl_int success = m_program.build(devices);
+
+	if (success != CL_SUCCESS)
+	{
+		LOGWARNING("Error compiling openCL shader: %d, falling back", success);
+		if (success == CL_BUILD_PROGRAM_FAILURE)
+		{
+			AString build_log;
+			m_program.getBuildInfo(devices[0],	CL_PROGRAM_BUILD_LOG, &build_log);
+			LOGWARNING("Program build log:");
+			LOGWARNING("%s",build_log.c_str());
+		}
+		m_enabled = false;
+	}
+	m_GenParamBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, sizeof(m_GenParam));
+
+	m_queue.enqueueWriteBuffer(m_GenParamBuffer, CL_TRUE, 0,sizeof(m_GenParam), m_GenParam);
+
+#endif
 }
 
 
