@@ -335,12 +335,15 @@ void cHeiGenClassic::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightM
 		kernel.setArg(3, a_ChunkZ);
 		kernel.setArg(4, HeightMapBuffer);
 		
-		cl::Event event; 
-		m_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange, NULL, &event);
+		cl::Event kernelevent, readevent; 
+		m_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange, NULL, &kernelevent);
 		
-		event.wait();
+		std::vector<cl::Event> ReadDependentEvents;
+		ReadDependentEvents.push_back(kernelevent);
+		m_queue.enqueueReadBuffer(HeightMapBuffer, CL_FALSE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap, &ReadDependentEvents, &readevent);
 		
-		m_queue.enqueueReadBuffer(HeightMapBuffer, CL_TRUE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap);
+		readevent.wait();
+		
 		return;
 	}
 	else

@@ -80,7 +80,7 @@ protected:
 
 
 
-#define USE_OPENCL_CPU
+#define USE_OPENCL_GPU
 
 #if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
 	#include "CL/cl.hpp"
