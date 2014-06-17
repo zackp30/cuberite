@@ -176,6 +176,7 @@ else ()
 			"${PATH}/*.h"
 			"${PATH}/*.rc"
 			"${PATH}/*.pkg"
+			"${PATH}/*.cl"
 		)
 		string(REPLACE "/" "\\" PROJECT_PATH ${PATH})
 		source_group("${PROJECT_PATH}" FILES ${FOLDER_FILES})
@@ -184,7 +185,7 @@ else ()
 	foreach(folder ${FOLDERS})
 		includefolder(${folder})
 	endforeach(folder)
-
+	
 	include_directories("${PROJECT_SOURCE_DIR}")
 
 	# Precompiled headers (1st part)
@@ -206,6 +207,13 @@ else ()
 	set(CMAKE_EXE_LINKER_FLAGS_RELEASE    "${CMAKE_EXE_LINKER_FLAGS_RELEASE}    /DEBUG")
 	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
 	set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /DEBUG")
+	
+	if(USE_OPENCL_CPU OR USE_OPENCL_GPU)
+		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/lib/")
+		include(FindOpenCl)
+		include_directories(${OPENCL_INCLUDE_DIR})
+	endif()
+	
 endif()
 
 set(EXECUTABLE MCServer)
@@ -245,7 +253,13 @@ if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE} Protocol Generating Generating_Prefabs WorldStorage)
 	target_link_libraries(${EXECUTABLE} Mobs Entities Simulator UI BlockEntities PolarSSL++)
 endif ()
+
 if (WIN32)
 	target_link_libraries(${EXECUTABLE} expat tolualib ws2_32.lib Psapi.lib)
 endif()
+
+if(MSVC AND (USE_OPENCL_CPU OR USE_OPENCL_GPU))
+	target_link_libraries(${EXECUTABLE} ${OPENCL_LIBRARY})
+endif()
+
 target_link_libraries(${EXECUTABLE} md5 luaexpat iniFile jsoncpp polarssl zlib lua sqlite)

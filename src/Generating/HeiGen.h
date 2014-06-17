@@ -80,6 +80,12 @@ protected:
 
 
 
+#define USE_OPENCL_CPU
+
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	#include "CL/cl.hpp"
+	#include "OSSupport\File.h"
+#endif
 
 class cHeiGenClassic :
 	public cTerrainHeightGen
@@ -94,7 +100,27 @@ protected:
 	float m_HeightFreq1, m_HeightAmp1;
 	float m_HeightFreq2, m_HeightAmp2;
 	float m_HeightFreq3, m_HeightAmp3;
+
+	struct HeiGenState
+	{
+		float m_HeightFreq1;
+		float m_HeightFreq2;
+		float m_HeightFreq3;
 	
+		float m_HeightAmp1;
+		float m_HeightAmp2;
+		float m_HeightAmp3;
+	};
+
+	HeiGenState m_State;
+	
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+		cl::Context m_context;
+		cl::CommandQueue m_queue;
+		cl::Program m_program;
+		bool m_enabled;
+	#endif
+
 	float GetNoise(float x, float y);
 
 	// cTerrainHeightGen overrides:

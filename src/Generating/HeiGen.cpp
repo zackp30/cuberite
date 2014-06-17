@@ -239,6 +239,63 @@ cHeiGenClassic::cHeiGenClassic(int a_Seed) :
 	m_Seed(a_Seed),
 	m_Noise(a_Seed)
 {
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+
+	#ifdef USE_OPENCL_CPU
+		int deviceType = CL_DEVICE_TYPE_CPU;
+	#endif
+
+	#ifdef USE_OPENCL_GPU
+		int deviceType = CL_DEVICE_TYPE_GPU;
+	#endif
+
+	std::vector< cl::Platform > platformList;
+    cl::Platform::get(&platformList);
+	if (platformList.size() == 0)
+	{
+		LOG("Could not find a platform, falling back to c++ mode");
+		m_enabled = false;
+		return;
+	}
+
+	m_enabled = true;
+
+	cl_context_properties cprops[3] = 
+		{CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[0])(), 0};
+	 
+	m_context = cl::Context(deviceType, cprops);
+		
+	std::vector<cl::Device> devices = m_context.getInfo<CL_CONTEXT_DEVICES>();
+
+	#define PROFILING 1
+
+	#ifdef PROFILING
+		m_queue = cl::CommandQueue(m_context, devices[0], CL_QUEUE_PROFILING_ENABLE);
+	#else
+		m_queue = cl::CommandQueue(m_context, devices[0], 0);
+	#endif
+	
+	AString prog = cFile::ReadWholeFile("Shaders/HeiGenClassic.cl");
+
+	cl::Program::Sources source( 1, std::make_pair(prog.c_str(),
+							prog.length() + 1));
+	m_program = cl::Program(m_context, source);
+	
+	cl_int success = m_program.build(devices);
+
+	if (success != CL_SUCCESS)
+	{
+		LOGWARNING("Error compiling openCL shader: %d, falling back", success);
+		if (success = CL_BUILD_PROGRAM_FAILURE)
+		{
+			AString build_log;
+			m_program.getBuildInfo(devices[0],	CL_PROGRAM_BUILD_LOG, &build_log);
+			LOGWARNING("Program build log:");
+			LOGWARNING("%s",build_log.c_str());
+		}
+		m_enabled = false;
+	}
+#endif
 }
 
 
@@ -259,69 +316,35 @@ float cHeiGenClassic::GetNoise(float x, float y)
 	return (oct1 + oct2 + oct3) * flatness + height;
 }
 
-#define USE_OPENCL_CPU
 
-#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
-	#include "CL/cl.hpp"
-	
-	char g_HeiGenClassic_cl[] = R"(
-		#include HeiGenClassic.cl
-		)";
-	int g_HeiGenClassic_cl_len = sizeof(g_HeiGenClassic_cl);
-#endif
 
 
 void cHeiGenClassic::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMap & a_HeightMap)
 {
-#ifdef USE_OPENCL_CPU
-	int deviceType = CL_DEVICE_TYPE_CPU;
-#endif
 
 #if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
-	std::vector< cl::Platform > platformList;
-    cl::Platform::get(&platformList);
-	if (platformList.size() == 0)
+	if (m_enabled)
 	{
-		goto fallback;
-	}
-	{
-		cl_context_properties cprops[3] = 
-			{CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[0])(), 0};
-	 
-		cl::Context context(deviceType, cprops);
+		cl::Kernel kernel(m_program, "GenHeightMap");
 		
-		std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-	
-		#ifdef PROFILING
-			cl::CommandQueue queue(context, devices[0], CL_QUEUE_PROFILING_ENABLE);
-		#else
-			cl::CommandQueue queue(context, devices[0], 0);
-		#endif
-	
-		cl::Program::Sources source( 1, std::make_pair(g_HeiGenClassic_cl,
-							  g_HeiGenClassic_cl_len));
-		cl::Program program(context, source);
-		
-		program.build(devices);
-		
-		cl::Kernel kernel(program, "GenHeightMap");
-		
-		cl::Buffer HeightMapBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cChunkDef::HeightMap));
+		cl::Buffer HeightMapBuffer(m_context, CL_MEM_WRITE_ONLY, sizeof(cChunkDef::HeightMap));
 		
 		kernel.setArg(0, m_Seed);
-		kernel.setArg(1, a_ChunkX);
-		kernel.setArg(2, a_ChunkZ);
-		kernel.setArg(3, HeightMapBuffer);
+		kernel.setArg(1, m_State);
+		kernel.setArg(2, a_ChunkX);
+		kernel.setArg(3, a_ChunkZ);
+		kernel.setArg(4, HeightMapBuffer);
 		
 		cl::Event event; 
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange, NULL, &event);
+		m_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange, NULL, &event);
 		
 		event.wait();
 		
-		queue.enqueueReadBuffer(HeightMapBuffer, CL_TRUE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap);
+		m_queue.enqueueReadBuffer(HeightMapBuffer, CL_TRUE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap);
 		return;
 	}
-	fallback: 
+	else
+	{
 #endif
 
 	for (int z = 0; z < cChunkDef::Width; z++) 
@@ -343,6 +366,9 @@ void cHeiGenClassic::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightM
 			cChunkDef::SetHeight(a_HeightMap, x , z, hei);
 		}  // for x
 	}  // for z
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	}
+#endif
 }
 
 
@@ -351,12 +377,12 @@ void cHeiGenClassic::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightM
 
 void cHeiGenClassic::InitializeHeightGen(cIniFile & a_IniFile)
 {
-	m_HeightFreq1 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq1", 0.1);
-	m_HeightFreq2 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq2", 1.0);
-	m_HeightFreq3 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq3", 2.0);
-	m_HeightAmp1  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp1",  1.0);
-	m_HeightAmp2  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp2",  0.5);
-	m_HeightAmp3  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp3",  0.5);
+	m_State.m_HeightFreq1 = m_HeightFreq1 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq1", 0.1);
+	m_State.m_HeightFreq2 = m_HeightFreq2 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq2", 1.0);
+	m_State.m_HeightFreq3 = m_HeightFreq3 = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightFreq3", 2.0);
+	m_State.m_HeightAmp1  = m_HeightAmp1  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp1",  1.0);
+	m_State.m_HeightAmp2  = m_HeightAmp2  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp2",  0.5);
+	m_State.m_HeightAmp2  = m_HeightAmp3  = (float)a_IniFile.GetValueSetF("Generator", "ClassicHeightAmp3",  0.5);
 }
 
 
