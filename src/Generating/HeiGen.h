@@ -143,6 +143,24 @@ protected:
 	int m_Seed;
 	cRidgedMultiNoise m_Noise;
 	cPerlinNoise m_Perlin;
+
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+
+		struct HeiGenState
+		{
+			float m_HeightFreq1, m_HeightAmp1;
+			float m_HeightFreq2, m_HeightAmp2;
+			float m_HeightFreq3, m_HeightAmp3;
+			float m_PerlinFreq,  m_PerlinAmp;
+		};
+
+		cl::Context m_context;
+		cl::CommandQueue m_queue;
+		cl::Program m_program;
+		bool m_enabled;
+
+		HeiGenState m_State;
+	#endif
 	
 	// cTerrainHeightGen overrides:
 	virtual void GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMap & a_HeightMap) override;

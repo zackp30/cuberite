@@ -399,6 +399,63 @@ cHeiGenMountains::cHeiGenMountains(int a_Seed) :
 	m_Seed(a_Seed),
 	m_Noise(a_Seed)
 {
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+
+	#ifdef USE_OPENCL_CPU
+		int deviceType = CL_DEVICE_TYPE_CPU;
+	#endif
+
+	#ifdef USE_OPENCL_GPU
+		int deviceType = CL_DEVICE_TYPE_GPU;
+	#endif
+
+	std::vector< cl::Platform > platformList;
+    cl::Platform::get(&platformList);
+	if (platformList.size() == 0)
+	{
+		LOG("Could not find a platform, falling back to c++ mode");
+		m_enabled = false;
+		return;
+	}
+
+	m_enabled = true;
+
+	cl_context_properties cprops[3] = 
+		{CL_CONTEXT_PLATFORM, (cl_context_properties)(platformList[0])(), 0};
+	 
+	m_context = cl::Context(deviceType, cprops);
+		
+	std::vector<cl::Device> devices = m_context.getInfo<CL_CONTEXT_DEVICES>();
+
+	#define PROFILING 1
+
+	#ifdef PROFILING
+		m_queue = cl::CommandQueue(m_context, devices[0], CL_QUEUE_PROFILING_ENABLE);
+	#else
+		m_queue = cl::CommandQueue(m_context, devices[0], 0);
+	#endif
+	
+	AString prog = cFile::ReadWholeFile("Shaders/HeiGenMountains.cl");
+
+	cl::Program::Sources source( 1, std::make_pair(prog.c_str(),
+							prog.length() + 1));
+	m_program = cl::Program(m_context, source);
+	
+	cl_int success = m_program.build(devices);
+
+	if (success != CL_SUCCESS)
+	{
+		LOGWARNING("Error compiling openCL shader: %d, falling back", success);
+		if (success == CL_BUILD_PROGRAM_FAILURE)
+		{
+			AString build_log;
+			m_program.getBuildInfo(devices[0],	CL_PROGRAM_BUILD_LOG, &build_log);
+			LOGWARNING("Program build log:");
+			LOGWARNING("%s",build_log.c_str());
+		}
+		m_enabled = false;
+	}
+#endif
 }
 
 
@@ -407,6 +464,33 @@ cHeiGenMountains::cHeiGenMountains(int a_Seed) :
 
 void cHeiGenMountains::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::HeightMap & a_HeightMap)
 {
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	if (m_enabled)
+	{
+		cl::Kernel kernel(m_program, "GenHeightMap");
+		
+		cl::Buffer HeightMapBuffer(m_context, CL_MEM_WRITE_ONLY, sizeof(cChunkDef::HeightMap));
+		
+		kernel.setArg(0, m_Seed);
+		kernel.setArg(1, m_State);
+		kernel.setArg(2, a_ChunkX);
+		kernel.setArg(3, a_ChunkZ);
+		kernel.setArg(4, HeightMapBuffer);
+		
+		cl::Event kernelevent, readevent; 
+		m_queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(16,16), cl::NullRange, NULL, &kernelevent);
+		
+		std::vector<cl::Event> ReadDependentEvents;
+		ReadDependentEvents.push_back(kernelevent);
+		m_queue.enqueueReadBuffer(HeightMapBuffer, CL_FALSE, 0, sizeof(cChunkDef::HeightMap), & a_HeightMap, &ReadDependentEvents, &readevent);
+		
+		readevent.wait();
+		
+		return;
+	}
+	else
+	{
+#endif
 	NOISE_DATATYPE StartX = (NOISE_DATATYPE)(a_ChunkX * cChunkDef::Width);
 	NOISE_DATATYPE EndX   = (NOISE_DATATYPE)(a_ChunkX * cChunkDef::Width + cChunkDef::Width - 1);
 	NOISE_DATATYPE StartZ = (NOISE_DATATYPE)(a_ChunkZ * cChunkDef::Width);
@@ -434,6 +518,9 @@ void cHeiGenMountains::GenHeightMap(int a_ChunkX, int a_ChunkZ, cChunkDef::Heigh
 			cChunkDef::SetHeight(a_HeightMap, x , z, hei);
 		}  // for x
 	}  // for z
+#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+	}
+#endif
 }
 
 
@@ -448,6 +535,18 @@ void cHeiGenMountains::InitializeHeightGen(cIniFile & a_IniFile)
 	m_Noise.AddOctave(0.02f, 1.5f);
 
 	m_Perlin.AddOctave(0.01f, 1.5f);
+
+	#if defined(USE_OPENCL_CPU) || defined(USE_OPENCL_GPU)
+		m_State.m_HeightFreq1 = 0.1f;
+		m_State.m_HeightFreq2 = 0.05f;
+		m_State.m_HeightFreq3 = 0.02f;
+		m_State.m_HeightAmp1 = 0.1f;
+		m_State.m_HeightAmp2 = 0.5f;
+		m_State.m_HeightAmp3 = 1.5f;
+
+		m_State.m_PerlinFreq = 0.01f;
+		m_State.m_PerlinAmp = 1.5f;
+	#endif
 }
 
 
