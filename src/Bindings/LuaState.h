@@ -69,7 +69,11 @@ typedef cWorld *       pWorld;
 
 
 
-extern __declspec(dllimport) std::atomic_size_t g_NumLocks;
+#ifdef _WIN32
+	extern __declspec(dllimport) std::atomic_size_t g_NumLocks;
+#else
+	extern std::atomic_size_t g_NumLocks;
+#endif
 
 
 

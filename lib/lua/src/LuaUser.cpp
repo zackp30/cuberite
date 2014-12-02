@@ -18,7 +18,11 @@ extern "C"
 
 
 // The counter for the lock operations
-__declspec(dllexport) std::atomic_size_t g_NumLocks(0);
+#ifdef _WIN32
+	__declspec(dllexport) std::atomic_size_t g_NumLocks(0);
+#else
+	std::atomic_size_t g_NumLocks(0);
+#endif
 
 
 
