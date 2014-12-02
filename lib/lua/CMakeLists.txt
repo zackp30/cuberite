@@ -9,6 +9,7 @@ file(GLOB SOURCE
 )
 
 list(REMOVE_ITEM SOURCE "${PROJECT_SOURCE_DIR}/src/lua.c" "${PROJECT_SOURCE_DIR}/src/luac.c")
+list (APPEND SOURCE src/LuaUser.cpp)
 
 # add headers to MSVC project files:
 if (MSVC)
@@ -57,6 +58,10 @@ if (WIN32)
 else()
 	add_library(lua ${SOURCE})
 endif()
+
+
+# Use the LuaUser header to pull in custom locking functions:
+add_definitions(-DLUA_USER_H="LuaUser.h")
 
 
 # Tell Lua what dynamic loader to use (for LuaRocks):

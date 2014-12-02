@@ -266,8 +266,15 @@ void cWebAdmin::HandleWebadminRequest(cHTTPConnection & a_Connection, cHTTPReque
 	// Try to get the template from the Lua template script
 	if (ShouldWrapInTemplate)
 	{
+		// DEBUG:
+		size_t countBefore = g_NumLocks;
+
 		if (m_TemplateScript.Call("ShowPage", this, &TemplateRequest, cLuaState::Return, Template))
 		{
+			// DEBUG:
+			size_t countAfter = g_NumLocks;
+			LOGD("WebAdmin: one page took %u locks", static_cast<unsigned>(countAfter - countBefore));
+
 			cHTTPResponse Resp;
 			Resp.SetContentType("text/html");
 			a_Connection.Send(Resp);

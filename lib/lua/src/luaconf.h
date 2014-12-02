@@ -105,6 +105,10 @@
 #endif
 
 
+// Added by _Xoft(o) to support multithreading / lock counting:
+#define lua_lock(L) LuaLock(L)
+#define lua_unlock(L) LuaUnlock(L)
+
 /*
 @@ LUA_DIRSEP is the directory separator (for submodules).
 ** CHANGE it if your machine does not use "/" as the directory separator
@@ -720,6 +724,7 @@ union luai_Cast { double l_d; long l_l; };
 ** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
 ** extra when a thread is created/deleted/resumed/yielded.
 */
+
 #define luai_userstateopen(L)		((void)L)
 #define luai_userstateclose(L)		((void)L)
 #define luai_userstatethread(L,L1)	((void)L)

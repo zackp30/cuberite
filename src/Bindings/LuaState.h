@@ -30,6 +30,8 @@ extern "C"
 	#include "lua/src/lauxlib.h"
 }
 
+#include <atomic>
+
 #include "../Vector3.h"
 #include "../Defines.h"
 
@@ -62,6 +64,12 @@ class cBoundingBox;
 
 typedef cBoundingBox * pBoundingBox;
 typedef cWorld *       pWorld;
+
+
+
+
+
+extern __declspec(dllimport) std::atomic_size_t g_NumLocks;
 
 
 
@@ -247,6 +255,7 @@ public:
 	template <typename FnT, typename... Args>
 	bool Call(const FnT & a_Function, Args &&... args)
 	{
+		cLuaLockCountMeasurer lockCountMeasurer(a_Function, m_SubsystemName);
 		if (!PushFunction(a_Function))
 		{
 			// Pushing the function failed
@@ -328,6 +337,46 @@ public:
 	static void LogStack(lua_State * a_LuaState, const char * a_Header = nullptr);
 	
 protected:
+
+	/** Simple RAII class that measures the amount of LuaLock calls between its constructor and destructor. */
+	class cLuaLockCountMeasurer
+	{
+		AString m_SubsystemName;
+		AString m_FunctionName;
+		size_t m_CountBefore;
+
+	public:
+
+		cLuaLockCountMeasurer(int a_Function, const AString & a_SubsystemName):
+			m_SubsystemName(a_SubsystemName),
+			m_FunctionName("<callback>"),
+			m_CountBefore(g_NumLocks)
+		{
+		}
+
+		cLuaLockCountMeasurer(const cLuaState::cTableRef a_Function, const AString & a_SubsystemName):
+			m_SubsystemName(a_SubsystemName),
+			m_FunctionName("<callback>"),
+			m_CountBefore(g_NumLocks)
+		{
+		}
+
+		cLuaLockCountMeasurer(const AString & a_Function, const AString & a_SubsystemName):
+			m_SubsystemName(a_SubsystemName),
+			m_FunctionName("<callback>"),
+			m_CountBefore(g_NumLocks)
+		{
+		}
+
+		~cLuaLockCountMeasurer()
+		{
+			size_t countAfter = g_NumLocks;
+			LOGD("Lua call \"%s\" in subsystem %s called the mutex lock %u times.",
+				m_FunctionName.c_str(), m_SubsystemName.c_str(), static_cast<unsigned>(countAfter - m_CountBefore)
+			);
+		}
+	};
+
 
 	lua_State * m_LuaState;
 	
