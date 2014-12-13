@@ -15,7 +15,7 @@ $cfile "../Vector3.h"
 $cfile "../ChunkDef.h"
 $cfile "../BiomeDef.h"
 
-$cfile "../../lib/inifile/iniFile.h"
+$cfile "../IniFile.h"
 
 $cfile "../OSSupport/File.h"
 
@@ -74,6 +74,7 @@ $cfile "../BlockEntities/JukeboxEntity.h"
 $cfile "../BlockEntities/NoteEntity.h"
 $cfile "../BlockEntities/SignEntity.h"
 $cfile "../BlockEntities/MobHeadEntity.h"
+$cfile "../BlockEntities/MobSpawnerEntity.h"
 $cfile "../BlockEntities/FlowerPotEntity.h"
 $cfile "../WebAdmin.h"
 $cfile "../Root.h"

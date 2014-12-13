@@ -100,6 +100,7 @@ public:
 	void ProcessChunk(
 		int a_ChunkX, int a_ChunkZ,
 		cChunkDef::BlockTypes & a_BlockTypes,
+		cChunkDesc::BlockNibbleBytes & a_BlockMetas,
 		cChunkDef::HeightMap & a_HeightMap
 	);
 
@@ -455,6 +456,7 @@ void cCaveTunnel::CalcBoundingBox(void)
 void cCaveTunnel::ProcessChunk(
 	int a_ChunkX, int a_ChunkZ,
 	cChunkDef::BlockTypes & a_BlockTypes,
+	cChunkDesc::BlockNibbleBytes & a_BlockMetas,
 	cChunkDef::HeightMap & a_HeightMap
 )
 {
@@ -503,6 +505,22 @@ void cCaveTunnel::ProcessChunk(
 					if (cBlockInfo::CanBeTerraformed(cChunkDef::GetBlock(a_BlockTypes, x, y, z)))
 					{
 						cChunkDef::SetBlock(a_BlockTypes, x, y, z, E_BLOCK_AIR);
+					}
+				}
+				else if (SqDist <= SqRad * 2)
+				{
+					if (cChunkDef::GetBlock(a_BlockTypes, x, y, z) == E_BLOCK_SAND)
+					{
+						int Index = cChunkDef::MakeIndexNoCheck(x, y, z);
+						if (a_BlockMetas[Index] == 1)
+						{
+							a_BlockMetas[Index] = 0;
+							cChunkDef::SetBlock(a_BlockTypes, x, y, z, E_BLOCK_RED_SANDSTONE);
+						}
+						else
+						{
+							cChunkDef::SetBlock(a_BlockTypes, x, y, z, E_BLOCK_SANDSTONE);
+						}
 					}
 				}
 			}  // for y
@@ -596,11 +614,12 @@ void cStructGenWormNestCaves::cCaveSystem::DrawIntoChunk(cChunkDesc & a_ChunkDes
 {
 	int ChunkX = a_ChunkDesc.GetChunkX();
 	int ChunkZ = a_ChunkDesc.GetChunkZ();
-	cChunkDef::BlockTypes & BlockTypes = a_ChunkDesc.GetBlockTypes();
-	cChunkDef::HeightMap &  HeightMap  = a_ChunkDesc.GetHeightMap();
+	cChunkDef::BlockTypes        & BlockTypes = a_ChunkDesc.GetBlockTypes();
+	cChunkDef::HeightMap         &  HeightMap = a_ChunkDesc.GetHeightMap();
+	cChunkDesc::BlockNibbleBytes & BlockMetas = a_ChunkDesc.GetBlockMetasUncompressed();
 	for (cCaveTunnels::const_iterator itr = m_Tunnels.begin(), end = m_Tunnels.end(); itr != end; ++itr)
 	{
-		(*itr)->ProcessChunk(ChunkX, ChunkZ, BlockTypes, HeightMap);
+		(*itr)->ProcessChunk(ChunkX, ChunkZ, BlockTypes, BlockMetas, HeightMap);
 	}  // for itr - m_Tunnels[]
 }
 
@@ -692,8 +711,14 @@ static float GetMarbleNoise( float x, float y, float z, cNoise & a_Noise)
 	float oct1 = (a_Noise.CubicNoise3D(x * 0.1f, y * 0.1f, z * 0.1f)) * 4;
 
 	oct1 = oct1 * oct1 * oct1;
-	if (oct1 < 0.f)  oct1 = PI_2;
-	if (oct1 > PI_2) oct1 = PI_2;
+	if (oct1 < 0.f)
+	{
+		oct1 = PI_2;
+	}
+	if (oct1 > PI_2)
+	{
+		oct1 = PI_2;
+	}
 
 	return oct1;
 }

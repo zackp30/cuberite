@@ -13,11 +13,10 @@ SET (SRCS
 	IsThread.cpp
 	ListenThread.cpp
 	Semaphore.cpp
-	Sleep.cpp
 	Socket.cpp
 	SocketThreads.cpp
-	Thread.cpp
-	Timer.cpp)
+	StackTrace.cpp
+)
 
 SET (HDRS
 	CriticalSection.h
@@ -29,20 +28,19 @@ SET (HDRS
 	ListenThread.h
 	Queue.h
 	Semaphore.h
-	Sleep.h
 	Socket.h
 	SocketThreads.h
-	Thread.h
-	Timer.h)
+	StackTrace.h
+)
 
 if(NOT MSVC)
 	add_library(OSSupport ${SRCS} ${HDRS})
 
-	if(NOT APPLE)
-		target_link_libraries(OSSupport rt)
-	endif()
+	if(UNIX)
+		if(NOT APPLE)
+			target_link_libraries(OSSupport rt)
+		endif()
 
-    if(UNIX)
-        target_link_libraries(OSSupport pthread)
-    endif()
+		target_link_libraries(OSSupport pthread)
+	endif()
 endif()

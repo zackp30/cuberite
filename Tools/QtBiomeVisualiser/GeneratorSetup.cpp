@@ -3,7 +3,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include "src/Generating/BioGen.h"
-#include "inifile/iniFile.h"
+#include "src/IniFile.h"
 
 
 
@@ -14,6 +14,8 @@ static const QString s_GeneratorNames[] =
 	QString("Checkerboard"),
 	QString("Constant"),
 	QString("DistortedVoronoi"),
+	QString("Grown"),
+	QString("GrownProt"),
 	QString("MultiStepMap"),
 	QString("TwoLevel"),
 	QString("Voronoi"),

@@ -9,6 +9,7 @@ include_directories (SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../lib/polarssl/include
 set(FOLDERS
 	OSSupport HTTPServer Items Blocks Protocol Generating PolarSSL++ Bindings
 	WorldStorage Mobs Entities Simulator UI BlockEntities Generating/Prefabs
+	Noise
 )
 
 SET (SRCS
@@ -34,6 +35,7 @@ SET (SRCS
 	FastRandom.cpp
 	FurnaceRecipe.cpp
 	Globals.cpp
+	IniFile.cpp
 	Inventory.cpp
 	Item.cpp
 	ItemGrid.cpp
@@ -49,7 +51,6 @@ SET (SRCS
 	MobProximityCounter.cpp
 	MobSpawner.cpp
 	MonsterConfig.cpp
-	Noise.cpp
 	ProbabDistrib.cpp
 	RankManager.cpp
 	RCONServer.cpp
@@ -64,7 +65,8 @@ SET (SRCS
 	VoronoiMap.cpp
 	WebAdmin.cpp
 	World.cpp
-	main.cpp)
+	main.cpp
+)
 
 SET (HDRS
 	AllocationPool.h
@@ -98,10 +100,10 @@ SET (HDRS
 	ForEachChunkProvider.h
 	FurnaceRecipe.h
 	Globals.h
+	IniFile.h
 	Inventory.h
 	Item.h
 	ItemGrid.h
-	LeakFinder.h
 	LightingThread.h
 	LineBlockTracer.h
 	LinearInterpolation.h
@@ -111,14 +113,11 @@ SET (HDRS
 	Map.h
 	MapManager.h
 	Matrix4.h
-	MemoryLeak.h
-	MersenneTwister.h
 	MobCensus.h
 	MobFamilyCollecter.h
 	MobProximityCounter.h
 	MobSpawner.h
 	MonsterConfig.h
-	Noise.h
 	ProbabDistrib.h
 	RankManager.h
 	RCONServer.h
@@ -126,7 +125,6 @@ SET (HDRS
 	Scoreboard.h
 	Server.h
 	SetChunkData.h
-	StackWalker.h
 	Statistics.h
 	StringCompression.h
 	StringUtils.h
@@ -135,7 +133,8 @@ SET (HDRS
 	VoronoiMap.h
 	WebAdmin.h
 	World.h
-	XMLParser.h)
+	XMLParser.h
+)
 
 include_directories(".")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/../lib/sqlite")
@@ -172,6 +171,10 @@ if (NOT MSVC)
 	endif()
 else ()
 	# MSVC-specific handling: Put all files into one project, separate by the folders:
+
+	# Add the MSVC-specific LeakFinder sources:
+	list (APPEND SRCS LeakFinder.cpp StackWalker.cpp)
+	list (APPEND HDRS LeakFinder.h StackWalker.h MemoryLeak.h)
 
 	source_group(Bindings FILES "Bindings/Bindings.cpp" "Bindings/Bindings.h")
 
@@ -222,7 +225,7 @@ else ()
 		Bindings/Bindings.cpp PROPERTIES COMPILE_FLAGS "/Yc\"string.h\" /Fp\"$(IntDir)/Bindings.pch\""
 	)
 	SET_SOURCE_FILES_PROPERTIES(
-		"StackWalker.cpp LeakFinder.h" PROPERTIES COMPILE_FLAGS "/Yc\"Globals.h\""
+		"StackWalker.cpp LeakFinder.cpp" PROPERTIES COMPILE_FLAGS "/Yc\"Globals.h\""
 	)
 	list(APPEND SOURCE "Resources/MCServer.rc")
 
@@ -312,7 +315,7 @@ endif ()
 
 if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE}
-		OSSupport HTTPServer Bindings Items Blocks
+		OSSupport HTTPServer Bindings Items Blocks Noise
 		Protocol Generating Generating_Prefabs WorldStorage
 		Mobs Entities Simulator UI BlockEntities PolarSSL++
 	)
@@ -320,4 +323,4 @@ endif ()
 if (WIN32)
 	target_link_libraries(${EXECUTABLE} expat tolualib ws2_32.lib Psapi.lib)
 endif()
-target_link_libraries(${EXECUTABLE} luaexpat iniFile jsoncpp polarssl zlib sqlite lua SQLiteCpp)
+target_link_libraries(${EXECUTABLE} luaexpat jsoncpp polarssl zlib sqlite lua SQLiteCpp)
