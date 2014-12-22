@@ -38,12 +38,14 @@ static const struct
 	{mtEnderman,     "enderman",     "Enderman"},
 	{mtEnderDragon,  "enderdragon",  "EnderDragon"},
 	{mtGhast,        "ghast",        "Ghast"},
+	{mtGuardian,     "guardian",     "Guardian"},
 	{mtHorse,        "horse",        "EntityHorse"},
 	{mtIronGolem,    "irongolem",    "VillagerGolem"},
 	{mtMagmaCube,    "magmacube",    "LavaSlime"},
 	{mtMooshroom,    "mooshroom",    "MushroomCow"},
 	{mtOcelot,       "ocelot",       "Ozelot"},
 	{mtPig,          "pig",          "Pig"},
+	{mtRabbit,       "rabbit",       "Rabbit"},
 	{mtSheep,        "sheep",        "Sheep"},
 	{mtSilverfish,   "silverfish",   "Silverfish"},
 	{mtSkeleton,     "skeleton",     "Skeleton"},
@@ -498,6 +500,7 @@ void cMonster::KilledBy(TakeDamageInfo & a_TDI)
 		case mtCow:
 		case mtHorse:
 		case mtPig:
+		case mtRabbit:
 		case mtSheep:
 		case mtSquid:
 		case mtMooshroom:
@@ -513,6 +516,7 @@ void cMonster::KilledBy(TakeDamageInfo & a_TDI)
 		case mtCreeper:
 		case mtEnderman:
 		case mtGhast:
+		case mtGuardian:
 		case mtSilverfish:
 		case mtSkeleton:
 		case mtSpider:
@@ -842,12 +846,14 @@ cMonster::eFamily cMonster::FamilyFromType(eMonsterType a_Type)
 		case mtEnderman:     return mfHostile;
 		case mtGhast:        return mfHostile;
 		case mtGiant:        return mfNoSpawn;
+		case mtGuardian:     return mfWater; // Just because they have special spawning conditions. If Watertemples have been added, this needs to be edited!
 		case mtHorse:        return mfPassive;
 		case mtIronGolem:    return mfPassive;
 		case mtMagmaCube:    return mfHostile;
 		case mtMooshroom:    return mfHostile;
 		case mtOcelot:       return mfPassive;
 		case mtPig:          return mfPassive;
+		case mtRabbit:       return mfPassive;
 		case mtSheep:        return mfPassive;
 		case mtSilverfish:   return mfHostile;
 		case mtSkeleton:     return mfHostile;
@@ -955,10 +961,12 @@ cMonster * cMonster::NewMonsterFromType(eMonsterType a_MobType)
 		case mtEnderman:      toReturn = new cEnderman();                 break;
 		case mtGhast:         toReturn = new cGhast();                    break;
 		case mtGiant:         toReturn = new cGiant();                    break;
+		case mtGuardian:      toReturn = new cGuardian();                 break;
 		case mtIronGolem:     toReturn = new cIronGolem();                break;
 		case mtMooshroom:     toReturn = new cMooshroom();                break;
 		case mtOcelot:        toReturn = new cOcelot();                   break;
 		case mtPig:           toReturn = new cPig();                      break;
+		case mtRabbit:        toReturn = new cRabbit();                   break;
 		case mtSheep:         toReturn = new cSheep();                    break;
 		case mtSilverfish:    toReturn = new cSilverfish();               break;
 		case mtSnowGolem:     toReturn = new cSnowGolem();                break;
