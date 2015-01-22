@@ -28,14 +28,14 @@ void cGuardian::GetDrops(cItems & a_Drops, cEntity * a_Killer)
 	}
 	AddRandomDropItem(a_Drops, 0, 2 + LootingLevel, E_ITEM_PRISMARINE_SHARD);
 	AddRandomDropItem(a_Drops, 0, 1 + LootingLevel, E_ITEM_RAW_FISH);
-	AddRandomDropItem(a_Drops, 0, 1 + LootingLevel, E_ITEM_PRISMARINE_CRYSTALS); // ToDo: Prismarine Crystals only drop if the raw fish drop is 0
+	AddRandomDropItem(a_Drops, 0, 1 + LootingLevel, E_ITEM_PRISMARINE_CRYSTALS);  // TODO: Prismarine Crystals only drop if the raw fish drop is 0
 }
 
 
 
 
 
-void cGuardian::Tick(float a_Dt, cChunk & a_Chunk)
+void cGuardian::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 {
 	// We must first process current location, and only then tick, otherwise we risk processing a location in a chunk
 	// that is not where the entity currently resides (FS #411)
