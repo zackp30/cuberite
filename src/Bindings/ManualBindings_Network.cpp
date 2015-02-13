@@ -214,17 +214,16 @@ static int tolua_cNetwork_Listen(lua_State * L)
 ////////////////////////////////////////////////////////////////////////////////
 // cTCPLink bindings (routed through cLuaTCPLink):
 
-/** Binds cLuaTCPLink::Send */
-static int tolua_cTCPLink_Send(lua_State * L)
+/** Binds cLuaTCPLink::Close */
+static int tolua_cTCPLink_Close(lua_State * L)
 {
 	// Function signature:
-	// LinkInstance:Send(DataString)
+	// LinkInstance:Close()
 
 	cLuaState S(L);
 	if (
 		!S.CheckParamUserType(1, "cTCPLink") ||
-		!S.CheckParamString(2) ||
-		!S.CheckParamEnd(3)
+		!S.CheckParamEnd(2)
 	)
 	{
 		return 0;
@@ -234,18 +233,14 @@ static int tolua_cTCPLink_Send(lua_State * L)
 	cLuaTCPLink * Link;
 	if (lua_isnil(L, 1))
 	{
-		LOGWARNING("cTCPLink:Send(): invalid link object. Stack trace:");
+		LOGWARNING("cTCPLink:Close(): invalid link object. Stack trace:");
 		S.LogStackTrace();
 		return 0;
 	}
 	Link = *static_cast<cLuaTCPLink **>(lua_touserdata(L, 1));
 
-	// Get the data to send:
-	AString Data;
-	S.GetStackValues(2, Data);
-
-	// Send the data:
-	Link->Send(Data);
+	// CLose the link:
+	Link->Close();
 	return 0;
 }
 
@@ -389,6 +384,170 @@ static int tolua_cTCPLink_GetRemotePort(lua_State * L)
 
 
 
+/** Binds cLuaTCPLink::Send */
+static int tolua_cTCPLink_Send(lua_State * L)
+{
+	// Function signature:
+	// LinkInstance:Send(DataString)
+
+	cLuaState S(L);
+	if (
+		!S.CheckParamUserType(1, "cTCPLink") ||
+		!S.CheckParamString(2) ||
+		!S.CheckParamEnd(3)
+	)
+	{
+		return 0;
+	}
+	
+	// Get the link:
+	cLuaTCPLink * Link;
+	if (lua_isnil(L, 1))
+	{
+		LOGWARNING("cTCPLink:Send(): invalid link object. Stack trace:");
+		S.LogStackTrace();
+		return 0;
+	}
+	Link = *static_cast<cLuaTCPLink **>(lua_touserdata(L, 1));
+
+	// Get the data to send:
+	AString Data;
+	S.GetStackValues(2, Data);
+
+	// Send the data:
+	Link->Send(Data);
+	return 0;
+}
+
+
+
+
+
+/** Binds cLuaTCPLink::Shutdown */
+static int tolua_cTCPLink_Shutdown(lua_State * L)
+{
+	// Function signature:
+	// LinkInstance:Shutdown()
+
+	cLuaState S(L);
+	if (
+		!S.CheckParamUserType(1, "cTCPLink") ||
+		!S.CheckParamEnd(2)
+	)
+	{
+		return 0;
+	}
+	
+	// Get the link:
+	cLuaTCPLink * Link;
+	if (lua_isnil(L, 1))
+	{
+		LOGWARNING("cTCPLink:Shutdown(): invalid link object. Stack trace:");
+		S.LogStackTrace();
+		return 0;
+	}
+	Link = *static_cast<cLuaTCPLink **>(lua_touserdata(L, 1));
+
+	// Shutdown the link:
+	Link->Shutdown();
+	return 0;
+}
+
+
+
+
+
+/** Binds cLuaTCPLink::StartTLSClient */
+static int tolua_cTCPLink_StartTLSClient(lua_State * L)
+{
+	// Function signature:
+	// LinkInstance:StartTLSClient(OwnCert, OwnPrivKey, OwnPrivKeyPassword) -> [true] or [nil, ErrMsg]
+
+	cLuaState S(L);
+	if (
+		!S.CheckParamUserType(1, "cTCPLink") ||
+		!S.CheckParamString(2, 4) ||
+		!S.CheckParamEnd(5)
+	)
+	{
+		return 0;
+	}
+	
+	// Get the link:
+	cLuaTCPLink * Link;
+	if (lua_isnil(L, 1))
+	{
+		LOGWARNING("cTCPLink:StartTLSClient(): invalid link object. Stack trace:");
+		S.LogStackTrace();
+		return 0;
+	}
+	Link = *static_cast<cLuaTCPLink **>(lua_touserdata(L, 1));
+
+	// Read the params:
+	AString OwnCert, OwnPrivKey, OwnPrivKeyPassword;
+	S.GetStackValues(2, OwnCert, OwnPrivKey, OwnPrivKeyPassword);
+
+	// Start the TLS handshake:
+	AString res = Link->StartTLSClient(OwnCert, OwnPrivKey, OwnPrivKeyPassword);
+	if (!res.empty())
+	{
+		S.PushNil();
+		S.Push(Printf("Cannot start TLS on link to %s:%d: %s", Link->GetRemoteIP().c_str(), Link->GetRemotePort(), res.c_str()));
+		return 2;
+	}
+	return 1;
+}
+
+
+
+
+
+/** Binds cLuaTCPLink::StartTLSServer */
+static int tolua_cTCPLink_StartTLSServer(lua_State * L)
+{
+	// Function signature:
+	// LinkInstance:StartTLSServer(OwnCert, OwnPrivKey, OwnPrivKeyPassword, StartTLSData) -> [true] or [nil, ErrMsg]
+
+	cLuaState S(L);
+	if (
+		!S.CheckParamUserType(1, "cTCPLink") ||
+		!S.CheckParamString(2, 4) ||
+		// Param 5 is optional, don't check
+		!S.CheckParamEnd(6)
+	)
+	{
+		return 0;
+	}
+	
+	// Get the link:
+	cLuaTCPLink * Link;
+	if (lua_isnil(L, 1))
+	{
+		LOGWARNING("cTCPLink:StartTLSServer(): invalid link object. Stack trace:");
+		S.LogStackTrace();
+		return 0;
+	}
+	Link = *static_cast<cLuaTCPLink **>(lua_touserdata(L, 1));
+
+	// Read the params:
+	AString OwnCert, OwnPrivKey, OwnPrivKeyPassword, StartTLSData;
+	S.GetStackValues(2, OwnCert, OwnPrivKey, OwnPrivKeyPassword, StartTLSData);
+
+	// Start the TLS handshake:
+	AString res = Link->StartTLSServer(OwnCert, OwnPrivKey, OwnPrivKeyPassword, StartTLSData);
+	if (!res.empty())
+	{
+		S.PushNil();
+		S.Push(Printf("Cannot start TLS on link to %s:%d: %s", Link->GetRemoteIP().c_str(), Link->GetRemotePort(), res.c_str()));
+		return 2;
+	}
+	return 1;
+}
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // cServerHandle bindings (routed through cLuaServerHandle):
 
@@ -495,11 +654,15 @@ void ManualBindings::BindNetwork(lua_State * tolua_S)
 	tolua_endmodule(tolua_S);
 
 	tolua_beginmodule(tolua_S, "cTCPLink");
-		tolua_function(tolua_S, "Send",          tolua_cTCPLink_Send);
-		tolua_function(tolua_S, "GetLocalIP",    tolua_cTCPLink_GetLocalIP);
-		tolua_function(tolua_S, "GetLocalPort",  tolua_cTCPLink_GetLocalPort);
-		tolua_function(tolua_S, "GetRemoteIP",   tolua_cTCPLink_GetRemoteIP);
-		tolua_function(tolua_S, "GetRemotePort", tolua_cTCPLink_GetRemotePort);
+		tolua_function(tolua_S, "Close",          tolua_cTCPLink_Close);
+		tolua_function(tolua_S, "GetLocalIP",     tolua_cTCPLink_GetLocalIP);
+		tolua_function(tolua_S, "GetLocalPort",   tolua_cTCPLink_GetLocalPort);
+		tolua_function(tolua_S, "GetRemoteIP",    tolua_cTCPLink_GetRemoteIP);
+		tolua_function(tolua_S, "GetRemotePort",  tolua_cTCPLink_GetRemotePort);
+		tolua_function(tolua_S, "Send",           tolua_cTCPLink_Send);
+		tolua_function(tolua_S, "Shutdown",       tolua_cTCPLink_Shutdown);
+		tolua_function(tolua_S, "StartTLSClient", tolua_cTCPLink_StartTLSClient);
+		tolua_function(tolua_S, "StartTLSServer", tolua_cTCPLink_StartTLSServer);
 	tolua_endmodule(tolua_S);
 
 	tolua_beginmodule(tolua_S, "cServerHandle");
