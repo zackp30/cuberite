@@ -40,7 +40,7 @@ public:
 		}
 
 		// The door needs a compatible block below it:
-		if ((a_BlockY > 0) && !cBlockDoorHandler::CanBeOn(a_World.GetBlock(a_BlockX, a_BlockY - 1, a_BlockZ)))
+		if (!cBlockDoorHandler::CanBeOn(a_World.GetBlock(a_BlockX, a_BlockY - 1, a_BlockZ)))
 		{
 			return false;
 		}
@@ -62,10 +62,10 @@ public:
 				return false;
 			}
 		}
-		
+
 		// Check the two blocks that will get replaced by the door:
-		BLOCKTYPE LowerBlockType = a_World.GetBlock(a_BlockX, a_BlockY + 1, a_BlockZ);
-		BLOCKTYPE UpperBlockType = a_World.GetBlock(a_BlockX, a_BlockY + 2, a_BlockZ);
+		BLOCKTYPE LowerBlockType = a_World.GetBlock(a_BlockX, a_BlockY, a_BlockZ);
+		BLOCKTYPE UpperBlockType = a_World.GetBlock(a_BlockX, a_BlockY + 1, a_BlockZ);
 		if (
 			!cBlockDoorHandler::CanReplaceBlock(LowerBlockType) ||
 			!cBlockDoorHandler::CanReplaceBlock(UpperBlockType))
@@ -106,7 +106,3 @@ public:
 		return true;
 	}
 } ;
-
-
-
-
