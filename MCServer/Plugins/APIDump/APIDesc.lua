@@ -925,8 +925,8 @@ local Hash = cCryptoHash.sha1HexString("DataToHash")
 					{ Params = "DamageType, AttackerEntity, RawDamage, KnockbackAmount", Return = "", Notes = "Causes this entity to take damage of the specified type, from the specified attacker (may be nil). The final damage is calculated from RawDamage using the currently equipped armor." },
 					{ Params = "DamageType, ArrackerEntity, RawDamage, FinalDamage, KnockbackAmount", Return = "", Notes = "Causes this entity to take damage of the specified type, from the specified attacker (may be nil). The values are wrapped into a {{TakeDamageInfo}} structure and applied directly." },
 				},
-				TeleportToCoords = { Params = "PosX, PosY, PosZ", Return = "", Notes = "Teleports the entity to the specified coords." },
-				TeleportToEntity = { Params = "DestEntity", Return = "", Notes = "Teleports this entity to the specified destination entity." },
+				TeleportToCoords = { Params = "PosX, PosY, PosZ", Return = "", Notes = "Teleports the entity to the specified coords. Asks plugins if the teleport is allowed." },
+				TeleportToEntity = { Params = "DestEntity", Return = "", Notes = "Teleports this entity to the specified destination entity. Asks plugins if the teleport is allowed." },
 			},
 			Constants =
 			{
@@ -2254,6 +2254,27 @@ end
 				ShouldAuthenticate = { Params = "", Return = "bool", Notes = "Returns true iff the server is set to authenticate players (\"online mode\")." },
 			},
 		},  -- cServer
+		
+		cStringCompression =
+		{
+			Desc = [[
+				Provides functions to compress or decompress string
+				<p>
+				All functions in this class are static, so they should be called in the dot convention:
+<pre class="prettyprint lang-lua">
+local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
+</pre>
+			]],
+			
+			Functions =
+			{
+				CompressStringGZIP   = {Params = "string", Return = "string", Notes = "Compress a string using GZIP"},
+				CompressStringZLIB   = {Params = "string, factor", Return = "string", Notes = "Compresses a string using ZLIB. Factor 0 is no compression and factor 9 is maximum compression"},
+				InflateString        = {Params = "string", Return = "string", Notes = "Uncompresses a string using Inflate"},
+				UncompressStringGZIP = {Params = "string", Return = "string", Notes = "Uncompress a string using GZIP"},
+				UncompressStringZLIB = {Params = "string, uncompressed length", Return = "string", Notes = "Uncompresses a string using ZLIB"},
+			},
+		},
 
 		cTeam =
 		{
@@ -2944,6 +2965,7 @@ end
 				RotateBlockFaceCW = { Params = "{{Globals#BlockFaces|eBlockFace}}", Return = "{{Globals#BlockFaces|eBlockFace}}", Notes = "Returns the {{Globals#BlockFaces|eBlockFace}} that corresponds to the given {{Globals#BlockFaces|eBlockFace}} after rotating it around the Y axis 90 degrees clockwise." },
 				StringSplit = {Params = "string, SeperatorsString", Return = "array table of strings", Notes = "Seperates string into multiple by splitting every time any of the characters in SeperatorsString is encountered."},
 				StringSplitAndTrim = {Params = "string, SeperatorsString", Return = "array table of strings", Notes = "Seperates string into multiple by splitting every time any of the characters in SeperatorsString is encountered. Each of the separate strings is trimmed (whitespace removed from the beginning and end of the string)"},
+				StringSplitWithQuotes = {Params = "string, SeperatorsString", Return = "array table of strings", Notes = "Seperates string into multiple by splitting every time any of the characters in SeperatorsString is encountered. Whitespace wrapped with single or double quotes will be ignored"},
 				StringToBiome = {Params = "string", Return = "{{Globals#BiomeTypes|BiomeType}}", Notes = "Converts a string representation to a {{Globals#BiomeTypes|BiomeType}} enumerated value"},
 				StringToDamageType = {Params = "string", Return = "{{Globals#DamageType|DamageType}}", Notes = "Converts a string representation to a {{Globals#DamageType|DamageType}} enumerated value."},
 				StringToDimension = {Params = "string", Return = "{{Globals#WorldDimension|Dimension}}", Notes = "Converts a string representation to a {{Globals#WorldDimension|Dimension}} enumerated value"},

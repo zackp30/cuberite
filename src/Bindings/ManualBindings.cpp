@@ -31,6 +31,7 @@
 #include "../LineBlockTracer.h"
 #include "../WorldStorage/SchematicFileSerializer.h"
 #include "../CompositeChat.h"
+#include "../StringCompression.h"
 
 
 
@@ -110,6 +111,146 @@ static int tolua_Clamp(lua_State * tolua_S)
 
 
 
+static int tolua_CompressStringZLIB(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+	if (
+		!S.CheckParamString(1) ||
+		(
+			!S.CheckParamNumber(2) &&
+			!S.CheckParamEnd(2)
+		)
+	)
+	{
+		cLuaState::LogStackTrace(tolua_S);
+		return 0;
+	}
+
+	// Get the params:
+	AString ToCompress;
+	int CompressionLevel = 5;
+	S.GetStackValues(1, ToCompress, CompressionLevel);
+
+	// Compress the string:
+	AString res;
+	CompressString(ToCompress.data(), ToCompress.size(), res, CompressionLevel);
+	S.Push(res);
+	return 1;
+}
+
+
+
+
+
+static int tolua_UncompressStringZLIB(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+	if (
+		!S.CheckParamString(1) ||
+		!S.CheckParamNumber(2)
+	)
+	{
+		cLuaState::LogStackTrace(tolua_S);
+		return 0;
+	}
+
+	// Get the params:
+	AString ToUncompress;
+	int UncompressedSize;
+	S.GetStackValues(1, ToUncompress, UncompressedSize);
+
+	// Compress the string:
+	AString res;
+	UncompressString(ToUncompress.data(), ToUncompress.size(), res, UncompressedSize);
+	S.Push(res);
+	return 1;
+}
+
+
+
+
+
+static int tolua_CompressStringGZIP(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+	if (
+		!S.CheckParamString(1) ||
+		!S.CheckParamEnd(2)
+	)
+	{
+		cLuaState::LogStackTrace(tolua_S);
+		return 0;
+	}
+
+	// Get the params:
+	AString ToCompress;
+	S.GetStackValues(1, ToCompress);
+
+	// Compress the string:
+	AString res;
+	CompressStringGZIP(ToCompress.data(), ToCompress.size(), res);
+	S.Push(res);
+	return 1;
+}
+
+
+
+
+
+static int tolua_UncompressStringGZIP(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+	if (
+		!S.CheckParamString(1) ||
+		!S.CheckParamEnd(2)
+	)
+	{
+		cLuaState::LogStackTrace(tolua_S);
+		return 0;
+	}
+
+	// Get the params:
+	AString ToUncompress;
+	S.GetStackValues(1, ToUncompress);
+
+	// Compress the string:
+	AString res;
+	UncompressStringGZIP(ToUncompress.data(), ToUncompress.size(), res);
+	S.Push(res);
+	return 1;
+}
+
+
+
+
+
+static int tolua_InflateString(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+	if (
+		!S.CheckParamString(1) ||
+		!S.CheckParamEnd(2)
+	)
+	{
+		cLuaState::LogStackTrace(tolua_S);
+		return 0;
+	}
+
+	// Get the params:
+	AString ToUncompress;
+	S.GetStackValues(1, ToUncompress);
+
+	// Compress the string:
+	AString res;
+	InflateString(ToUncompress.data(), ToUncompress.size(), res);
+	S.Push(res);
+	return 1;
+}
+
+
+
+
+
 static int tolua_StringSplit(lua_State * tolua_S)
 {
 	cLuaState LuaState(tolua_S);
@@ -118,6 +259,24 @@ static int tolua_StringSplit(lua_State * tolua_S)
 
 	AStringVector Split = StringSplit(str, delim);
 	LuaState.Push(Split);
+	return 1;
+}
+
+
+
+
+
+static int tolua_StringSplitWithQuotes(lua_State * tolua_S)
+{
+	cLuaState S(tolua_S);
+
+	AString str;
+	AString delim;
+
+	S.GetStackValues(1, str, delim);
+
+	AStringVector Split = StringSplitWithQuotes(str, delim);
+	S.Push(Split);
 	return 1;
 }
 
@@ -2251,10 +2410,10 @@ static int tolua_md5HexString(lua_State * tolua_S)
 
 	// Convert the md5 checksum to hex string:
 	std::stringstream Output;
-	Output << std::hex << std::setw(2) << std::setfill('0');
+	Output << std::hex << std::setfill('0');
 	for (size_t i = 0; i < ARRAYCOUNT(md5Output); i++)
 	{
-		Output << static_cast<unsigned short>(md5Output[i]);  // Need to cast to a number, otherwise a char is output
+		Output << std::setw(2) << static_cast<unsigned short>(md5Output[i]);  // Need to cast to a number, otherwise a char is output
 	}
 	lua_pushlstring(tolua_S, Output.str().c_str(), Output.str().size());
 	return 1;
@@ -2297,10 +2456,10 @@ static int tolua_sha1HexString(lua_State * tolua_S)
 
 	// Convert the sha1 checksum to hex string:
 	std::stringstream Output;
-	Output << std::hex << std::setw(2) << std::setfill('0');
+	Output << std::hex << std::setfill('0');
 	for (size_t i = 0; i < ARRAYCOUNT(sha1Output); i++)
 	{
-		Output << static_cast<unsigned short>(sha1Output[i]);  // Need to cast to a number, otherwise a char is output
+		Output << std::setw(2) << static_cast<unsigned short>(sha1Output[i]);  // Need to cast to a number, otherwise a char is output
 	}
 	lua_pushlstring(tolua_S, Output.str().c_str(), Output.str().size());
 	return 1;
@@ -3516,19 +3675,22 @@ void ManualBindings::Bind(lua_State * tolua_S)
 		// Create the new classes:
 		tolua_usertype(tolua_S, "cCryptoHash");
 		tolua_cclass(tolua_S, "cCryptoHash", "cCryptoHash", "", nullptr);
+		tolua_usertype(tolua_S, "cStringCompression");
+		tolua_cclass(tolua_S, "cStringCompression", "cStringCompression", "", nullptr);
 
 		// Globals:
-		tolua_function(tolua_S, "Clamp",              tolua_Clamp);
-		tolua_function(tolua_S, "StringSplit",        tolua_StringSplit);
-		tolua_function(tolua_S, "StringSplitAndTrim", tolua_StringSplitAndTrim);
-		tolua_function(tolua_S, "LOG",                tolua_LOG);
-		tolua_function(tolua_S, "LOGINFO",            tolua_LOGINFO);
-		tolua_function(tolua_S, "LOGWARN",            tolua_LOGWARN);
-		tolua_function(tolua_S, "LOGWARNING",         tolua_LOGWARN);
-		tolua_function(tolua_S, "LOGERROR",           tolua_LOGERROR);
-		tolua_function(tolua_S, "Base64Encode",       tolua_Base64Encode);
-		tolua_function(tolua_S, "Base64Decode",       tolua_Base64Decode);
-		tolua_function(tolua_S, "md5",                tolua_md5_obsolete);  // OBSOLETE, use cCryptoHash.md5() instead
+		tolua_function(tolua_S, "Clamp",                 tolua_Clamp);
+		tolua_function(tolua_S, "StringSplit",           tolua_StringSplit);
+		tolua_function(tolua_S, "StringSplitWithQuotes", tolua_StringSplitWithQuotes);
+		tolua_function(tolua_S, "StringSplitAndTrim",    tolua_StringSplitAndTrim);
+		tolua_function(tolua_S, "LOG",                   tolua_LOG);
+		tolua_function(tolua_S, "LOGINFO",               tolua_LOGINFO);
+		tolua_function(tolua_S, "LOGWARN",               tolua_LOGWARN);
+		tolua_function(tolua_S, "LOGWARNING",            tolua_LOGWARN);
+		tolua_function(tolua_S, "LOGERROR",              tolua_LOGERROR);
+		tolua_function(tolua_S, "Base64Encode",          tolua_Base64Encode);
+		tolua_function(tolua_S, "Base64Decode",          tolua_Base64Decode);
+		tolua_function(tolua_S, "md5",                   tolua_md5_obsolete);  // OBSOLETE, use cCryptoHash.md5() instead
 		
 		tolua_beginmodule(tolua_S, "cFile");
 			tolua_function(tolua_S, "GetFolderContents", tolua_cFile_GetFolderContents);
@@ -3690,6 +3852,14 @@ void ManualBindings::Bind(lua_State * tolua_S)
 			tolua_function(tolua_S, "md5HexString", tolua_md5HexString);
 			tolua_function(tolua_S, "sha1", tolua_sha1);
 			tolua_function(tolua_S, "sha1HexString", tolua_sha1HexString);
+		tolua_endmodule(tolua_S);
+		
+		tolua_beginmodule(tolua_S, "cStringCompression");
+			tolua_function(tolua_S, "CompressStringZLIB",     tolua_CompressStringZLIB);
+			tolua_function(tolua_S, "UncompressStringZLIB",   tolua_UncompressStringZLIB);
+			tolua_function(tolua_S, "CompressStringGZIP",     tolua_CompressStringGZIP);
+			tolua_function(tolua_S, "UncompressStringGZIP",   tolua_UncompressStringGZIP);
+			tolua_function(tolua_S, "InflateString",          tolua_InflateString);
 		tolua_endmodule(tolua_S);
 		
 		BindRankManager(tolua_S);

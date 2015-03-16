@@ -1,6 +1,5 @@
 language: cpp
-compiler:
-  - gcc
+compiler: gcc
 
 before_install:
   - if [ "$TRAVIS_MCSERVER_BUILD_TYPE" == "COVERAGE" ]; then sudo pip install cpp_coveralls; fi
@@ -8,6 +7,9 @@ before_install:
   # g++4.8
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq
+
+install:
+  # g++4.8 and clang
   - sudo apt-get install -qq g++-4.8
   - export CXX="g++-4.8"
   - export CC="gcc-4.8"
