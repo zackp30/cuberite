@@ -37,26 +37,3 @@ void cZombie::GetDrops(cItems & a_Drops, cEntity * a_Killer)
 	AddRandomArmorDropItem(a_Drops, LootingLevel);
 	AddRandomWeaponDropItem(a_Drops, LootingLevel);
 }
-
-
-
-
-
-void cZombie::MoveToPosition(const Vector3d & a_Position)
-{
-	// If the destination is sufficiently skylight challenged AND the skeleton isn't on fire then block the movement
-	if (
-		!IsOnFire() &&
-		(m_World->GetBlockSkyLight((int)floor(a_Position.x), (int)floor(a_Position.y), (int)floor(a_Position.z)) - m_World->GetSkyDarkness() > 8)
-		)
-	{
-		m_bMovingToDestination = false;
-		return;
-	}
-
-	super::MoveToPosition(a_Position);
-}
-
-
-
-

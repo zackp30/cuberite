@@ -833,7 +833,7 @@ void cWorld::InitialiseAndLoadMobSpawningValues(cIniFile & a_IniFile)
 	AString DefaultMonsters;
 	switch (m_Dimension)
 	{
-		case dimOverworld: DefaultMonsters = "bat, cavespider, chicken, cow, creeper, enderman, horse, mooshroom, ocelot, pig, sheep, silverfish, skeleton, slime, spider, squid, wolf, zombie"; break;
+		case dimOverworld: DefaultMonsters = "bat, cavespider, chicken, cow, creeper, enderman, guardian, horse, mooshroom, ocelot, pig, rabbit, sheep, silverfish, skeleton, slime, spider, squid, wolf, zombie"; break;
 		case dimNether:    DefaultMonsters = "blaze, ghast, magmacube, skeleton, zombie, zombiepigman"; break;
 		case dimEnd:       DefaultMonsters = "enderman"; break;
 		case dimNotSet:    ASSERT(!"Dimension not set"); break;
@@ -3712,7 +3712,7 @@ void cWorld::cChunkGeneratorCallbacks::OnChunkGenerated(cChunkDesc & a_ChunkDesc
 		a_ChunkDesc.GetBlockTypes(), BlockMetas,
 		nullptr, nullptr,  // We don't have lighting, chunk will be lighted when needed
 		&a_ChunkDesc.GetHeightMap(), &a_ChunkDesc.GetBiomeMap(),
-		a_ChunkDesc.GetEntities(), a_ChunkDesc.GetBlockEntities(),
+		std::move(a_ChunkDesc.GetEntities()), std::move(a_ChunkDesc.GetBlockEntities()),
 		true
 	));
 	SetChunkData->RemoveInvalidBlockEntities();

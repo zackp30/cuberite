@@ -253,12 +253,13 @@ static int tolua_InflateString(lua_State * tolua_S)
 
 static int tolua_StringSplit(lua_State * tolua_S)
 {
+	// Get the params:
 	cLuaState LuaState(tolua_S);
-	std::string str   = (std::string)tolua_tocppstring(LuaState, 1, 0);
-	std::string delim = (std::string)tolua_tocppstring(LuaState, 2, 0);
+	AString str, delim;
+	LuaState.GetStackValues(1, str, delim);
 
-	AStringVector Split = StringSplit(str, delim);
-	LuaState.Push(Split);
+	// Execute and push the result:
+	LuaState.Push(StringSplit(str, delim));
 	return 1;
 }
 
@@ -472,6 +473,7 @@ cPluginLua * GetLuaPlugin(lua_State * L)
 
 static int tolua_cFile_GetFolderContents(lua_State * tolua_S)
 {
+	// Check params:
 	cLuaState LuaState(tolua_S);
 	if (
 		!LuaState.CheckParamUserTable(1, "cFile") ||
@@ -482,10 +484,38 @@ static int tolua_cFile_GetFolderContents(lua_State * tolua_S)
 		return 0;
 	}
 	
-	AString Folder = (AString)tolua_tocppstring(LuaState, 2, 0);
+	// Get params:
+	AString Folder;
+	LuaState.GetStackValues(2, Folder);
 
-	AStringVector Contents = cFile::GetFolderContents(Folder);
-	LuaState.Push(Contents);
+	// Execute and push result:
+	LuaState.Push(cFile::GetFolderContents(Folder));
+	return 1;
+}
+
+
+
+
+
+static int tolua_cFile_ReadWholeFile(lua_State * tolua_S)
+{
+	// Check params:
+	cLuaState LuaState(tolua_S);
+	if (
+		!LuaState.CheckParamUserTable(1, "cFile") ||
+		!LuaState.CheckParamString   (2) ||
+		!LuaState.CheckParamEnd      (3)
+	)
+	{
+		return 0;
+	}
+	
+	// Get params:
+	AString FileName;
+	LuaState.GetStackValues(2, FileName);
+
+	// Execute and push result:
+	LuaState.Push(cFile::ReadWholeFile(FileName));
 	return 1;
 }
 
@@ -3187,6 +3217,44 @@ static int tolua_cBlockArea_GetOrigin(lua_State * tolua_S)
 
 
 
+static int tolua_cBlockArea_GetNonAirCropRelCoords(lua_State * tolua_S)
+{
+	// function cBlockArea::GetNonAirCropRelCoords()
+	// Exported manually because tolua would generate extra input params for the outputs
+	
+	cLuaState L(tolua_S);
+	if (!L.CheckParamUserType(1, "cBlockArea"))
+	{
+		return 0;
+	}
+	
+	cBlockArea * self = nullptr;
+	BLOCKTYPE IgnoreBlockType = E_BLOCK_AIR;
+	L.GetStackValues(1, self, IgnoreBlockType);
+	if (self == nullptr)
+	{
+		tolua_error(tolua_S, "invalid 'self' in function 'cBlockArea:GetNonAirCropRelCoords'", nullptr);
+		return 0;
+	}
+	
+	// Calculate the crop coords:
+	int MinRelX, MinRelY, MinRelZ, MaxRelX, MaxRelY, MaxRelZ;
+	self->GetNonAirCropRelCoords(MinRelX, MinRelY, MinRelZ, MaxRelX, MaxRelY, MaxRelZ, IgnoreBlockType);
+
+	// Push the six crop coords:
+	L.Push(MinRelX);
+	L.Push(MinRelY);
+	L.Push(MinRelZ);
+	L.Push(MaxRelX);
+	L.Push(MaxRelY);
+	L.Push(MaxRelZ);
+	return 6;
+}
+
+
+
+
+
 static int tolua_cBlockArea_GetRelBlockTypeMeta(lua_State * tolua_S)
 {
 	// function cBlockArea::GetRelBlockTypeMeta()
@@ -3681,12 +3749,14 @@ void ManualBindings::Bind(lua_State * tolua_S)
 		
 		tolua_beginmodule(tolua_S, "cFile");
 			tolua_function(tolua_S, "GetFolderContents", tolua_cFile_GetFolderContents);
+			tolua_function(tolua_S, "ReadWholeFile",     tolua_cFile_ReadWholeFile);
 		tolua_endmodule(tolua_S);
 		
 		tolua_beginmodule(tolua_S, "cBlockArea");
 			tolua_function(tolua_S, "GetBlockTypeMeta",        tolua_cBlockArea_GetBlockTypeMeta);
 			tolua_function(tolua_S, "GetCoordRange",           tolua_cBlockArea_GetCoordRange);
 			tolua_function(tolua_S, "GetOrigin",               tolua_cBlockArea_GetOrigin);
+			tolua_function(tolua_S, "GetNonAirCropRelCoords",  tolua_cBlockArea_GetNonAirCropRelCoords);
 			tolua_function(tolua_S, "GetRelBlockTypeMeta",     tolua_cBlockArea_GetRelBlockTypeMeta);
 			tolua_function(tolua_S, "GetSize",                 tolua_cBlockArea_GetSize);
 			tolua_function(tolua_S, "LoadFromSchematicFile",   tolua_cBlockArea_LoadFromSchematicFile);
