@@ -590,7 +590,7 @@ static int tolua_DoWith(lua_State* tolua_S)
 template <
 	class Ty1,
 	class Ty2,
-	bool (Ty1::*Func1)(int, cItemCallback<Ty2> &)
+	bool (Ty1::*Func1)(UInt32, cItemCallback<Ty2> &)
 >
 static int tolua_DoWithID(lua_State* tolua_S)
 {
@@ -638,11 +638,11 @@ static int tolua_DoWithID(lua_State* tolua_S)
 	private:
 		virtual bool Item(Ty2 * a_Item) override
 		{
-			lua_rawgeti(LuaState, LUA_REGISTRYINDEX, FuncRef);            // Push function to call
-			tolua_pushusertype(LuaState, a_Item, Ty2::GetClassStatic());  // Push the item
+			lua_rawgeti(LuaState, LUA_REGISTRYINDEX, FuncRef);         // Push function to call
+			tolua_pushusertype(LuaState, a_Item, a_Item->GetClass());  // Push the item
 			if (TableRef != LUA_REFNIL)
 			{
-				lua_rawgeti(LuaState, LUA_REGISTRYINDEX, TableRef);         // Push the optional callbackdata param
+				lua_rawgeti(LuaState, LUA_REGISTRYINDEX, TableRef);      // Push the optional callbackdata param
 			}
 
 			int s = lua_pcall(LuaState, (TableRef == LUA_REFNIL ? 1 : 2), 1, 0);
@@ -1299,23 +1299,27 @@ tolua_lerror:
 
 
 class cLuaWorldTask :
-	public cWorld::cTask
+	public cWorld::cTask,
+	public cPluginLua::cResettable
 {
 public:
 	cLuaWorldTask(cPluginLua & a_Plugin, int a_FnRef) :
-		m_Plugin(a_Plugin),
+		cPluginLua::cResettable(a_Plugin),
 		m_FnRef(a_FnRef)
 	{
 	}
 
 protected:
-	cPluginLua & m_Plugin;
 	int m_FnRef;
 	
 	// cWorld::cTask overrides:
 	virtual void Run(cWorld & a_World) override
 	{
-		m_Plugin.Call(m_FnRef, &a_World);
+		cCSLock Lock(m_CSPlugin);
+		if (m_Plugin != nullptr)
+		{
+			m_Plugin->Call(m_FnRef, &a_World);
+		}
 	}
 } ;
 
@@ -1354,7 +1358,9 @@ static int tolua_cWorld_QueueTask(lua_State * tolua_S)
 		return lua_do_error(tolua_S, "Error in function call '#funcname#': Could not get function reference of parameter #1");
 	}
 
-	self->QueueTask(make_unique<cLuaWorldTask>(*Plugin, FnRef));
+	auto task = std::make_shared<cLuaWorldTask>(*Plugin, FnRef);
+	Plugin->AddResettable(task);
+	self->QueueTask(task);
 	return 0;
 }
 
@@ -1363,23 +1369,27 @@ static int tolua_cWorld_QueueTask(lua_State * tolua_S)
 
 
 class cLuaScheduledWorldTask :
-	public cWorld::cTask
+	public cWorld::cTask,
+	public cPluginLua::cResettable
 {
 public:
 	cLuaScheduledWorldTask(cPluginLua & a_Plugin, int a_FnRef) :
-		m_Plugin(a_Plugin),
+		cPluginLua::cResettable(a_Plugin),
 		m_FnRef(a_FnRef)
 	{
 	}
 
 protected:
-	cPluginLua & m_Plugin;
 	int m_FnRef;
 	
 	// cWorld::cTask overrides:
 	virtual void Run(cWorld & a_World) override
 	{
-		m_Plugin.Call(m_FnRef, &a_World);
+		cCSLock Lock(m_CSPlugin);
+		if (m_Plugin != nullptr)
+		{
+			m_Plugin->Call(m_FnRef, &a_World);
+		}
 	}
 };
 
@@ -1425,7 +1435,9 @@ static int tolua_cWorld_ScheduleTask(lua_State * tolua_S)
 	
 	int DelayTicks = (int)tolua_tonumber(tolua_S, 2, 0);
 
-	World->ScheduleTask(DelayTicks, new cLuaScheduledWorldTask(*Plugin, FnRef));
+	auto task = std::make_shared<cLuaScheduledWorldTask>(*Plugin, FnRef);
+	Plugin->AddResettable(task);
+	World->ScheduleTask(DelayTicks, task);
 	return 0;
 }
 
@@ -3677,6 +3689,8 @@ void ManualBindings::Bind(lua_State * tolua_S)
 		tolua_cclass(tolua_S, "cCryptoHash", "cCryptoHash", "", nullptr);
 		tolua_usertype(tolua_S, "cStringCompression");
 		tolua_cclass(tolua_S, "cStringCompression", "cStringCompression", "", nullptr);
+		tolua_usertype(tolua_S, "cLineBlockTracer");
+		tolua_cclass(tolua_S, "cLineBlockTracer", "cLineBlockTracer", "", nullptr);
 
 		// Globals:
 		tolua_function(tolua_S, "Clamp",                 tolua_Clamp);
@@ -3864,6 +3878,10 @@ void ManualBindings::Bind(lua_State * tolua_S)
 		
 		BindRankManager(tolua_S);
 		BindNetwork(tolua_S);
+
+		tolua_beginmodule(tolua_S, "cEntity");
+			tolua_constant(tolua_S, "INVALID_ID", cEntity::INVALID_ID);
+		tolua_endmodule(tolua_S);
 
 	tolua_endmodule(tolua_S);
 }
