@@ -75,56 +75,61 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
 	return JNI_VERSION_1_4;
 }
 
-/* Called when program/activity is created */
-extern "C" void Java_com_mcserver_MCServerActivity_NativeOnCreate( JNIEnv*  env, jobject thiz )
+#ifdef __cplusplus
+extern "C"
+#endif
 {
-	g_CriticalSection.Lock();
-	g_CurrentJNIEnv = env;
-	g_JavaThread = thiz;
-	//__android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "Logging from C++!");
-	g_CriticalSection.Unlock();
-	
-	cFile::CreateFolder("/sdcard/mcserver");
-
-	pRoot = new cRoot();
-	pRoot->Start();
-	delete pRoot; pRoot = NULL;
-}
-
-
-
-
-
-extern "C" void Java_com_mcserver_MCServerActivity_NativeCleanUp( JNIEnv*  env, jobject thiz )
-{
-	g_CriticalSection.Lock();
-	g_CurrentJNIEnv = env;
-	g_JavaThread = thiz;
-	g_CriticalSection.Unlock();
-
-	__android_log_print(ANDROID_LOG_ERROR,"MCServer", "pRoot: %p", pRoot);
-	if( pRoot != NULL )
+	/* Called when program/activity is created */
+	JNIEXPORT void JNICALL Java_com_mcserver_MCServerActivity_NativeOnCreate(JNIEnv*  env, jobject thiz)
 	{
-		pRoot->QueueExecuteConsoleCommand("stop");
+		g_CriticalSection.Lock();
+		g_CurrentJNIEnv = env;
+		g_JavaThread = thiz;
+		//__android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "Logging from C++!");
+		g_CriticalSection.Unlock();
+
+		cFile::CreateFolder("/sdcard/mcserver");
+
+		pRoot = new cRoot();
+		pRoot->Start();
+		delete pRoot; pRoot = NULL;
 	}
-}
 
 
 
 
-extern "C" jboolean Java_com_mcserver_MCServerActivity_NativeIsServerRunning( JNIEnv* env, jobject thiz )
-{
-	return pRoot != NULL;
-}
 
-
-
-
-extern "C" jint Java_com_mcserver_MCServerActivity_NativeGetWebAdminPort( JNIEnv* env, jobject thiz )
-{
-	if( pRoot != NULL && pRoot->GetWebAdmin() != NULL )
+	JNIEXPORT void JNICALL Java_com_mcserver_MCServerActivity_NativeCleanUp(JNIEnv*  env, jobject thiz)
 	{
-		return atoi(pRoot->GetWebAdmin()->GetIPv4Ports().c_str());
+		g_CriticalSection.Lock();
+		g_CurrentJNIEnv = env;
+		g_JavaThread = thiz;
+		g_CriticalSection.Unlock();
+
+		__android_log_print(ANDROID_LOG_ERROR, "MCServer", "pRoot: %p", pRoot);
+		if (pRoot != NULL)
+		{
+			pRoot->QueueExecuteConsoleCommand("stop");
+		}
 	}
-	return 0;
+
+
+
+
+	JNIEXPORT jboolean JNICALL Java_com_mcserver_MCServerActivity_NativeIsServerRunning(JNIEnv* env, jobject thiz)
+	{
+		return pRoot != NULL;
+	}
+
+
+
+
+	JNIEXPORT jint JNICALL Java_com_mcserver_MCServerActivity_NativeGetWebAdminPort(JNIEnv* env, jobject thiz)
+	{
+		if (pRoot != NULL && pRoot->GetWebAdmin() != NULL)
+		{
+			return atoi(pRoot->GetWebAdmin()->GetIPv4Ports().c_str());
+		}
+		return 0;
+	}
 }

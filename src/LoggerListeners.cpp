@@ -179,7 +179,7 @@
 				}
 				case cLogger::llWarning:
 				{
-					AndroidLogLevel = ANDROID_LOG_WARNING;
+					AndroidLogLevel = ANDROID_LOG_WARN;
 					break;
 				}
 				case cLogger::llError:

@@ -62,10 +62,12 @@ if(${BUILD_UNSTABLE_TOOLS})
 	add_subdirectory(Tools/GeneratorPerformanceTest/)
 endif()
 
-include(SetFlags.cmake)
-set_flags()
-set_lib_flags()
-enable_profile()
+if (NOT ANDROID)
+	include(SetFlags.cmake)
+	set_flags()
+	set_lib_flags()
+	enable_profile()
+endif()
 
 # Under Windows, we need Lua as DLL; on *nix we need it linked statically:
 if (WIN32)
@@ -142,7 +144,9 @@ endif()
 # (PolarSSL also has test and example programs in their CMakeLists.txt, we don't want those)
 include(lib/polarssl.cmake EXCLUDE_FROM_ALL)
 
-set_exe_flags()
+if (NOT ANDROID)
+	set_exe_flags()
+endif()
 
 add_subdirectory (src)
 

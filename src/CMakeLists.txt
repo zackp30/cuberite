@@ -284,6 +284,7 @@ if (MSVC)
 	)
 endif()
 
+if (NOT ANDROID)
 add_executable(${EXECUTABLE} ${SOURCE})
 
 
@@ -303,6 +304,9 @@ SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES DEBUG_POSTFIX "_debug")
 # Make the profiled executables have a "_profile" postfix
 SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES DEBUGPROFILE_POSTFIX "_debug_profile")
 SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES RELEASEPROFILE_POSTFIX "_profile")
+else()
+	add_library(MCServer SHARED ${SOURCE})
+endif()
 
 
 # Precompiled headers (2nd part)
@@ -318,7 +322,7 @@ if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE}
 		OSSupport HTTPServer Bindings Items Blocks Noise
 		Protocol Generating Generating_Prefabs WorldStorage
-		Mobs Entities Simulator BlockEntities UI PolarSSL++
+		Mobs Entities Simulator BlockEntities UI PolarSSL++ AndroidNative
 	)
 endif ()
 if (WIN32)

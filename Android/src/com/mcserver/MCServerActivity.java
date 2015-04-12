@@ -269,7 +269,7 @@ public class MCServerActivity extends Activity {
     
     
     static {
-        System.loadLibrary("mcserver");
+        System.load("/data/data/com.mcserver/lib/libMCServer.so");
     }
     
     
