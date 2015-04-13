@@ -9,7 +9,7 @@
 #if defined(_WIN32)
 	#include <IPHlpApi.h>
 	#pragma comment(lib, "IPHLPAPI.lib")
-#elif !defined(ANDROID_NDK)  // _WIN32
+#elif !defined(ANDROID)  // _WIN32
 	#include <sys/types.h>
 	#include <ifaddrs.h>
 	#include <netinet/in.h>
@@ -72,7 +72,7 @@ static AString PrintAddress(SOCKET_ADDRESS & a_Addr)
 	return IP;
 }
 
-#elif !defined(ANDROID_NDK) // _WIN32
+#elif !defined(ANDROID) // _WIN32
 
 static AString PrintAddress(ifaddrs * InterfaceAddress)
 {
@@ -151,7 +151,7 @@ AStringVector cNetwork::EnumLocalIPAddresses(void)
 			}  // for pUnicast
 		}  // for pCurrAddresses
 
-	#elif !defined(ANDROID_NDK)  // _WIN32
+	#elif !defined(ANDROID)  // _WIN32
 
 		struct ifaddrs * ifAddrStruct = nullptr;
 		getifaddrs(&ifAddrStruct);

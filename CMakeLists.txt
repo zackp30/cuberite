@@ -40,16 +40,16 @@ endif()
 # We need C++11 features, Visual Studio has those from VS2012, but it needs a new platform toolset for those; VS2013 supports them natively:
 # Adapted from http://binglongx.wordpress.com/2013/06/28/set-non-default-platform-toolset-in-cmake/
 if(MSVC OR MSVC_IDE)
-  if( MSVC_VERSION LESS 1700 )       # VC10- / VS2010-
-    message(FATAL_ERROR "The project requires C++11 features. "
-      "You need at least Visual Studio 11 (Microsoft Visual Studio 2012), "
-      "with Microsoft Visual C++ Compiler Nov 2012 CTP (v120_CTP_Nov2012).")
-  elseif( MSVC_VERSION EQUAL 1700 )  # VC11 / VS2012
-    message( "VC11: using Microsoft Visual Studio 2012 "
-      "with Microsoft Visual C++ Compiler Nov 2012 CTP (v120_CTP_Nov2012)" )
-    set(CMAKE_GENERATOR_TOOLSET "v120_CTP_Nov2012" CACHE STRING "Platform Toolset" FORCE)
-  else() # VC12+, assuming C++11 supported.
-  endif()
+	if( MSVC_VERSION LESS 1700 )       # VC10- / VS2010-
+		message(FATAL_ERROR "The project requires C++11 features. "
+			"You need at least Visual Studio 11 (Microsoft Visual Studio 2012), "
+			"with Microsoft Visual C++ Compiler Nov 2012 CTP (v120_CTP_Nov2012).")
+	elseif( MSVC_VERSION EQUAL 1700 )  # VC11 / VS2012
+		message( "VC11: using Microsoft Visual Studio 2012 "
+			"with Microsoft Visual C++ Compiler Nov 2012 CTP (v120_CTP_Nov2012)" )
+		set(CMAKE_GENERATOR_TOOLSET "v120_CTP_Nov2012" CACHE STRING "Platform Toolset" FORCE)
+	else() # VC12+, assuming C++11 supported.
+	endif()
 endif()
 
 # This has to be done before any flags have been set up.
@@ -62,18 +62,25 @@ if(${BUILD_UNSTABLE_TOOLS})
 	add_subdirectory(Tools/GeneratorPerformanceTest/)
 endif()
 
+# The Android toolchains sets its own flags; interference is bad
 if (NOT ANDROID)
 	include(SetFlags.cmake)
 	set_flags()
 	set_lib_flags()
 	enable_profile()
+else()	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") # Add c++11 support here since we're not calling set_flags()
+	set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j4") # Tell make.exe to use multithreading since Android builds call make through cmake (cmake --build .)
+
+	 # Tell libevent that Android has pthread (not auto detected due to NDK implementation problems)
+	 # Tell Lua to not use unimplemented Android locale features
+	add_definitions(-DEVENT__HAVE_PTHREADS -Dgetlocaledecpoint\(\)="'.'")
 endif()
 
 # Under Windows, we need Lua as DLL; on *nix we need it linked statically:
 if (WIN32)
 	add_definitions(-DLUA_BUILD_AS_DLL)
 endif()
-
 
 # The Expat library is linked in statically, make the source files aware of that:
 add_definitions(-DXML_STATIC)
@@ -84,7 +91,7 @@ if(${SELF_TEST})
 endif()
 
 
-
+####
 
 
 project (MCServer)
@@ -139,20 +146,22 @@ if (WIN32)
 	add_subdirectory(lib/luaproxy/)
 endif()
 
-
 # We use EXCLUDE_FROM_ALL so that only the explicit dependencies are used
 # (PolarSSL also has test and example programs in their CMakeLists.txt, we don't want those)
 include(lib/polarssl.cmake EXCLUDE_FROM_ALL)
 
+# Add the Android subfolder to compilation if building for it - make sure again not to set Desktop flags
 if (NOT ANDROID)
 	set_exe_flags()
+else()
+	add_subdirectory(Android)
 endif()
 
-add_subdirectory (src)
+add_subdirectory(src)
 
 if(${SELF_TEST})
 	message("Tests enabled")
 	enable_testing()
-	add_subdirectory (tests)
+	add_subdirectory(tests)
 endif()
 

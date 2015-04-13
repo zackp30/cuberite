@@ -78,9 +78,6 @@ public class MCServerActivity extends Activity {
         	    mLogList);
         lv.setAdapter(mAdapter);
         
-        
-        mLogList.add("---- LOG ----");
-        
         ServerStatusThread = new Thread( new Runnable() {
 			public void run() {
 				for(;;)
@@ -269,7 +266,7 @@ public class MCServerActivity extends Activity {
     
     
     static {
-        System.load("/data/data/com.mcserver/lib/libMCServer.so");
+        System.loadLibrary("MCServer");
     }
     
     

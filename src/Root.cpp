@@ -94,7 +94,7 @@ void cRoot::InputThread(cRoot & a_Params)
 
 
 
-
+#include <android/log.h>
 
 void cRoot::Start(void)
 {
@@ -105,9 +105,9 @@ void cRoot::Start(void)
 	#endif
 	
 	cLogger::cListener * consoleLogListener = MakeConsoleListener();
-	cLogger::cListener * fileLogListener = new cFileListener();
+	//cLogger::cListener * fileLogListener = new cFileListener();
 	cLogger::GetInstance().AttachListener(consoleLogListener);
-	cLogger::GetInstance().AttachListener(fileLogListener);
+	//cLogger::GetInstance().AttachListener(fileLogListener);
 	
 	LOG("--- Started Log ---\n");
 
@@ -189,7 +189,7 @@ void cRoot::Start(void)
 		{
 			m_WebAdmin->Start();
 
-			#if !defined(ANDROID_NDK)
+			#if !defined(ANDROID)
 			LOGD("Starting InputThread...");
 			try
 			{
@@ -265,8 +265,8 @@ void cRoot::Start(void)
 	
 	cLogger::GetInstance().DetachListener(consoleLogListener);
 	delete consoleLogListener;
-	cLogger::GetInstance().DetachListener(fileLogListener);
-	delete fileLogListener;
+	//cLogger::GetInstance().DetachListener(fileLogListener);
+	//delete fileLogListener;
 }
 
 

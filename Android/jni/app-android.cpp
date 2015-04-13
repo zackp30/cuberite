@@ -12,6 +12,7 @@
 
 #include "OSSupport/CriticalSection.h"
 #include "OSSupport/File.h"
+#include "OSSupport/NetworkSingleton.h"
 #include "ToJava.h"
 
 #include "Root.h"
@@ -32,67 +33,86 @@ cCriticalSection g_CriticalSection;
 JNIEnv* g_CurrentJNIEnv = 0;
 jobject g_JavaThread = 0;
 JavaVM* g_JavaVM = 0;
-//jobject g_JavaActivity = 0;
-
-cRoot * pRoot = NULL;
 
 
-class cMainThread :
-	public cIsThread
+
+
+class cRootLauncher
 {
 public:
-	cMainThread() :
-	  cIsThread("cMainThread")
-	  {
-		  //Start();
-		  __android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "cMainThread");
-	  }
 
-	  void Stop(void)
-	  {
-		  m_ShouldTerminate = true;
-		  Wait();
-	  }
-
-protected:
-
-	virtual void Execute(void) override
+	void Start()
 	{
-		__android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "Execute");
-		pRoot = new cRoot();
-		pRoot->Start();
-		delete pRoot;
+		m_Root.Start();
 	}
 
-} ;
+	void Stop()
+	{
+		if (!IsStopped())
+		{
+			m_Root.QueueExecuteConsoleCommand("stop");
+		}
+	}
 
-cMainThread * pMainThread = NULL;
+	bool IsStopped()
+	{
+		return m_Root.GetServer() == nullptr;
+	}
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved)
-{
-	//__android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "JNI_OnLoad JNI_OnLoad JNI_OnLoad JNI_OnLoad");
-	g_JavaVM = vm;
-	return JNI_VERSION_1_4;
-}
+	cRoot & GetInstance()
+	{
+		return m_Root;
+	}
 
-#ifdef __cplusplus
+private:
+
+	cRoot m_Root;
+
+} RootLauncher;
+
+
+
+
+
 extern "C"
-#endif
 {
+	jint JNI_OnLoad(JavaVM* vm, void* reserved)
+	{
+		g_JavaVM = vm;
+		return JNI_VERSION_1_4;
+	}
+
 	/* Called when program/activity is created */
 	JNIEXPORT void JNICALL Java_com_mcserver_MCServerActivity_NativeOnCreate(JNIEnv*  env, jobject thiz)
 	{
 		g_CriticalSection.Lock();
 		g_CurrentJNIEnv = env;
 		g_JavaThread = thiz;
-		//__android_log_print(ANDROID_LOG_ERROR,"MCServer", "%s", "Logging from C++!");
 		g_CriticalSection.Unlock();
 
-		cFile::CreateFolder("/sdcard/mcserver");
+		cFile::CreateFolder(AString(FILE_IO_PREFIX) + "mcserver");
 
-		pRoot = new cRoot();
-		pRoot->Start();
-		delete pRoot; pRoot = NULL;
+		// Initialize logging subsystem:
+		cLogger::InitiateMultithreading();
+
+		// Initialize LibEvent:
+		cNetworkSingleton::Get();
+
+		try
+		{
+			RootLauncher.Start();
+		}
+		catch (std::exception & e)
+		{
+			LOGERROR("Standard exception: %s", e.what());
+		}
+		catch (...)
+		{
+			LOGERROR("Unknown exception!");
+		}
+
+		// Shutdown all of LibEvent:
+		cNetworkSingleton::Get().Terminate();
 	}
 
 
@@ -106,29 +126,27 @@ extern "C"
 		g_JavaThread = thiz;
 		g_CriticalSection.Unlock();
 
-		__android_log_print(ANDROID_LOG_ERROR, "MCServer", "pRoot: %p", pRoot);
-		if (pRoot != NULL)
-		{
-			pRoot->QueueExecuteConsoleCommand("stop");
-		}
+		RootLauncher.Stop();
 	}
+
 
 
 
 
 	JNIEXPORT jboolean JNICALL Java_com_mcserver_MCServerActivity_NativeIsServerRunning(JNIEnv* env, jobject thiz)
 	{
-		return pRoot != NULL;
+		return !RootLauncher.IsStopped();
 	}
+
 
 
 
 
 	JNIEXPORT jint JNICALL Java_com_mcserver_MCServerActivity_NativeGetWebAdminPort(JNIEnv* env, jobject thiz)
 	{
-		if (pRoot != NULL && pRoot->GetWebAdmin() != NULL)
+		if (!RootLauncher.IsStopped() && (RootLauncher.GetInstance().GetWebAdmin() != nullptr))
 		{
-			return atoi(pRoot->GetWebAdmin()->GetIPv4Ports().c_str());
+			return std::atoi(RootLauncher.GetInstance().GetWebAdmin()->GetIPv4Ports().c_str());
 		}
 		return 0;
 	}

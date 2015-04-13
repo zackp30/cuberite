@@ -459,7 +459,7 @@ void cWorld::InitializeSpawn(void)
 	cChunkDef::BlockToChunk((int)m_SpawnX, (int)m_SpawnZ, ChunkX, ChunkZ);
 	
 	// For the debugging builds, don't make the server build too much world upon start:
-	#if defined(_DEBUG) || defined(ANDROID_NDK)
+	#if defined(_DEBUG) || defined(ANDROID)
 		const int DefaultViewDist = 9;
 	#else
 		const int DefaultViewDist = 20;  // Always prepare an area 20 chunks across, no matter what the actual cClientHandle::VIEWDISTANCE is

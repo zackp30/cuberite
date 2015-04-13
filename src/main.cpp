@@ -212,14 +212,14 @@ void universalMain()
 	// Initialize LibEvent:
 	cNetworkSingleton::Get();
 
-	#if !defined(ANDROID_NDK)
+	#if !defined(ANDROID)
 	try
 	#endif
 	{
 		cRoot Root;
 		Root.Start();
 	}
-	#if !defined(ANDROID_NDK)
+	#if !defined(ANDROID)
 	catch (std::exception & e)
 	{
 		LOGERROR("Standard exception: %s", e.what());

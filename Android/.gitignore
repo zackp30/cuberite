@@ -1,0 +1,6 @@
+bin/
+libs/
+MCServer/
+CMakeFiles/
+CMakeCache
+local.properties

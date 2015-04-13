@@ -6,8 +6,10 @@
 #include "Globals.h"
 #include "FastRandom.h"
 
-#ifdef _WIN32
+#if defined _WIN32
 	#define thread_local __declspec(thread)
+#elif defined ANDROID
+	#define thread_local
 #endif
 
 thread_local unsigned int m_Counter = 0;

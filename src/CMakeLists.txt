@@ -257,9 +257,6 @@ foreach(arg ${ALLFILES})
 endforeach()
 FILE(WRITE "AllFiles.lst" "${ALLFILESLINES}")
 
-
-set(EXECUTABLE MCServer)
-
 if (MSVC)
 	get_directory_property(BINDING_OUTPUTS DIRECTORY "Bindings" DEFINITION BINDING_OUTPUTS)
 	get_directory_property(BINDING_DEPENDENCIES DIRECTORY "Bindings" DEFINITION BINDING_DEPENDENCIES)
@@ -285,47 +282,52 @@ if (MSVC)
 endif()
 
 if (NOT ANDROID)
-add_executable(${EXECUTABLE} ${SOURCE})
+	add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
 
+	# Output the executable into the $/MCServer folder, so that it has access to external resources:
+	set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/MCServer)
+	SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY_DEBUG          ${CMAKE_SOURCE_DIR}/MCServer
+		RUNTIME_OUTPUT_DIRECTORY_RELEASE        ${CMAKE_SOURCE_DIR}/MCServer
+		RUNTIME_OUTPUT_DIRECTORY_DEBUGPROFILE   ${CMAKE_SOURCE_DIR}/MCServer
+		RUNTIME_OUTPUT_DIRECTORY_RELEASEPROFILE ${CMAKE_SOURCE_DIR}/MCServer
+	)
 
-# Output the executable into the $/MCServer folder, so that it has access to external resources:
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/MCServer)
-SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG          ${CMAKE_SOURCE_DIR}/MCServer
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE        ${CMAKE_SOURCE_DIR}/MCServer
-	RUNTIME_OUTPUT_DIRECTORY_DEBUGPROFILE   ${CMAKE_SOURCE_DIR}/MCServer
-	RUNTIME_OUTPUT_DIRECTORY_RELEASEPROFILE ${CMAKE_SOURCE_DIR}/MCServer
-)
+	# Make the debug executable have a "_debug" suffix
+	SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "_debug")
 
-
-# Make the debug executable have a "_debug" suffix
-SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES DEBUG_POSTFIX "_debug")
-
-# Make the profiled executables have a "_profile" postfix
-SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES DEBUGPROFILE_POSTFIX "_debug_profile")
-SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES RELEASEPROFILE_POSTFIX "_profile")
+	# Make the profiled executables have a "_profile" postfix
+	SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES DEBUGPROFILE_POSTFIX "_debug_profile")
+	SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES RELEASEPROFILE_POSTFIX "_profile")
 else()
-	add_library(MCServer SHARED ${SOURCE})
+	add_library(${CMAKE_PROJECT_NAME} SHARED ${SOURCE})
 endif()
 
 
 # Precompiled headers (2nd part)
 if (MSVC)
 	SET_TARGET_PROPERTIES(
-		${EXECUTABLE} PROPERTIES COMPILE_FLAGS "/Yu\"Globals.h\""
+		${CMAKE_PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/Yu\"Globals.h\""
 		OBJECT_DEPENDS "$(IntDir)/$(TargetName.pch)"
 	)
 endif ()
 
 
 if (NOT MSVC)
-	target_link_libraries(${EXECUTABLE}
+	target_link_libraries(${CMAKE_PROJECT_NAME}
 		OSSupport HTTPServer Bindings Items Blocks Noise
 		Protocol Generating Generating_Prefabs WorldStorage
-		Mobs Entities Simulator BlockEntities UI PolarSSL++ AndroidNative
+		Mobs Entities Simulator BlockEntities UI PolarSSL++
 	)
+
+	if (ANDROID)
+		# Android requires linkage of the Java Native Interface calls as well as libatomic (the latter probably caused by incomplete NDK Clang support)
+		target_link_libraries(${CMAKE_PROJECT_NAME} AndroidNative atomic)
+	endif()
 endif ()
+
 if (WIN32)
-	target_link_libraries(${EXECUTABLE} expat tolualib ws2_32.lib Psapi.lib)
+	target_link_libraries(${CMAKE_PROJECT_NAME} expat tolualib ws2_32.lib Psapi.lib)
 endif()
-target_link_libraries(${EXECUTABLE} luaexpat jsoncpp polarssl zlib sqlite lua SQLiteCpp event_core event_extra)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} luaexpat jsoncpp polarssl zlib sqlite lua SQLiteCpp event_core event_extra)

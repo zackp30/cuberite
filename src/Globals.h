@@ -223,7 +223,7 @@ template class SizeChecker<UInt8,  1>;
 	#include <fcntl.h>
 #endif
 
-#if defined(ANDROID_NDK)
+#if defined(ANDROID)
 	#define FILE_IO_PREFIX "/sdcard/mcserver/"
 #else
 	#define FILE_IO_PREFIX ""

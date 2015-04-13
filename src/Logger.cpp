@@ -61,11 +61,12 @@ void cLogger::LogSimple(AString a_Message, eLogLevel a_LogLevel)
 
 
 
-
+#include <android/log.h>
 void cLogger::Log(const char * a_Format, eLogLevel a_LogLevel, va_list a_ArgList)
 {
 	AString Message;
 	AppendVPrintf(Message, a_Format, a_ArgList);
+	__android_log_print(6, "MCServer", "%s", Message.c_str());
 	LogSimple(Message, a_LogLevel);
 }
 

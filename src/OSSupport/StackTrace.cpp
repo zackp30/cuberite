@@ -7,7 +7,7 @@
 #include "StackTrace.h"
 #ifdef _WIN32
 	#include "../StackWalker.h"
-#elif !defined(ANDROID_NDK)  // The Android NDK has no execinfo header
+#elif !defined(ANDROID)  // The Android NDK has no execinfo header
 	#include <execinfo.h>
 	#include <unistd.h>
 #endif
@@ -30,7 +30,7 @@ void PrintStackTrace(void)
 			}
 		} sw;
 		sw.ShowCallstack();
-	#elif !defined(ANDROID_NDK)
+	#elif !defined(ANDROID)
 		// Use the backtrace() function to get and output the stackTrace:
 		// Code adapted from http://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
 		void * stackTrace[30];
