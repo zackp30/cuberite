@@ -68,13 +68,6 @@ if (NOT ANDROID)
 	set_flags()
 	set_lib_flags()
 	enable_profile()
-else()	
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") # Add c++11 support here since we're not calling set_flags()
-	set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j4") # Tell make.exe to use multithreading since Android builds call make through cmake (cmake --build .)
-
-	 # Tell libevent that Android has pthread (not auto detected due to NDK implementation problems)
-	 # Tell Lua to not use unimplemented Android locale features
-	add_definitions(-DEVENT__HAVE_PTHREADS -Dgetlocaledecpoint\(\)="'.'")
 endif()
 
 # Under Windows, we need Lua as DLL; on *nix we need it linked statically:
@@ -153,8 +146,6 @@ include(lib/polarssl.cmake EXCLUDE_FROM_ALL)
 # Add the Android subfolder to compilation if building for it - make sure again not to set Desktop flags
 if (NOT ANDROID)
 	set_exe_flags()
-else()
-	add_subdirectory(Android)
 endif()
 
 add_subdirectory(src)

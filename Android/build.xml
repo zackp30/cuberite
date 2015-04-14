@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="com.MCServer" default="help">
+<project name="org.MCServer" default="help">
+ 
+    <property name="asset.dir" value="../MCServer" />
+    <property name="aapt.ignore.assets" value="!.*:!*.cmd:!vg:!hg:!*.supp:!thumbs.db" />
 
     <!-- The local.properties file is created and updated by the 'android' tool.
          It contains the path to the SDK. It should *NOT* be checked into
@@ -86,23 +89,23 @@
          In all cases you must update the value of version-tag below to read 'custom' instead of an integer,
          in order to avoid having your file be overridden by tools such as "android update project"
     -->
-    <!-- version-tag: 1 -->
+    <!-- version-tag: custom -->
     <import file="${sdk.dir}/tools/ant/build.xml" />
 
     <target name="-pre-build">
       <exec executable="${cmake.dir}/cmake.exe" failonerror="true">
-        <arg value="-DCMAKE_TOOLCHAIN_FILE=android.toolchain.cmake"/>
-        <arg value="-DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-clang3.5"/>
-        <arg value="-DCMAKE_BUILD_TYPE=Debug"/>
-        <arg value="-DANDROID_ABI=&quot;armeabi&quot;"/>
-        <arg value="-G"/>
+        <arg value="-DCMAKE_TOOLCHAIN_FILE=android.toolchain.cmake" />
+        <arg value="-DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-clang3.5" />
+        <arg value="-DCMAKE_BUILD_TYPE=Debug" />
+        <arg value="-DANDROID_ABI=&quot;armeabi&quot;" />
+        <arg value="-G" />
         <arg value="MinGW Makefiles"/>
-        <arg value="-DCMAKE_MAKE_PROGRAM=&quot;${make.dir}/make.exe&quot;"/>
-        <arg value=".."/>
+        <arg value="-DCMAKE_MAKE_PROGRAM=&quot;${make.dir}/make.exe&quot;" />
+        <arg value="." />
       </exec>
       <exec executable="${cmake.dir}/cmake.exe" failonerror="true">
-        <arg value="--build"/>
-        <arg value="."/>
+        <arg value="--build" />
+        <arg value="." />
       </exec>
     </target>
 

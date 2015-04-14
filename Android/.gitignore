@@ -1,6 +1,6 @@
-bin/
-libs/
-MCServer/
-CMakeFiles/
-CMakeCache
+/bin/
+/libs/
+/MCServer/
+/CMakeFiles/
+CMakeCache.txt
 local.properties
