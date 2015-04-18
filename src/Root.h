@@ -46,6 +46,8 @@ public:
 	// tolua_end
 
 	static bool m_TerminateEventRaised;
+	static bool m_RunAsService;
+	static bool m_ShouldStop;
 
 
 	cRoot(void);
@@ -197,7 +199,6 @@ private:
 
 	cHTTPServer        m_HTTPServer;
 
-	bool m_bStop;
 	bool m_bRestart;
 
 	void LoadGlobalSettings();
