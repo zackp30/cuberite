@@ -1880,10 +1880,12 @@ void cChunkMap::DoExplosionAt(double a_ExplosionSize, double a_BlockX, double a_
 	if (ShouldDestroyBlocks)
 	{
 		cBlockArea area;
-
 		a_BlocksAffected.reserve(8 * ExplosionSizeInt * ExplosionSizeInt * ExplosionSizeInt);
-
-		area.Read(m_World, bx - ExplosionSizeInt, (int)ceil(a_BlockX + ExplosionSizeInt), MinY, MaxY, bz - ExplosionSizeInt, (int)ceil(a_BlockZ + ExplosionSizeInt));
+		if (!area.Read(m_World, bx - ExplosionSizeInt, (int)ceil(a_BlockX + ExplosionSizeInt), MinY, MaxY, bz - ExplosionSizeInt, (int)ceil(a_BlockZ + ExplosionSizeInt)))
+		{
+			return;
+		}
+		
 		for (int x = -ExplosionSizeInt; x < ExplosionSizeInt; x++)
 		{
 			for (int y = -ExplosionSizeInt; y < ExplosionSizeInt; y++)
@@ -2413,6 +2415,7 @@ bool cChunkMap::GenerateChunk(int a_ChunkX, int a_ChunkZ, cChunkCoordCallback * 
 	// Try loading the chunk:
 	if ((Chunk == nullptr) || (!Chunk->IsValid()))
 	{
+		Chunk->SetPresence(cChunk::cpQueued);
 		class cPrepareLoadCallback: public cChunkCoordCallback
 		{
 		public:
@@ -2427,6 +2430,7 @@ bool cChunkMap::GenerateChunk(int a_ChunkX, int a_ChunkZ, cChunkCoordCallback * 
 			virtual void Call(int a_CBChunkX, int a_CBChunkZ) override
 			{
 				// The chunk has been loaded or an error occurred, check if it's valid now:
+				cCSLock Lock(m_ChunkMap.m_CSLayers);
 				cChunkPtr CBChunk = m_ChunkMap.GetChunkNoLoad(a_CBChunkX, a_CBChunkZ);
 
 				if (CBChunk == nullptr)

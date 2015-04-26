@@ -26,24 +26,23 @@ function GetDefaultPage()
 	local SubTitle = "Current Game"
 	local Content = ""
 	
-	Content = Content .. "<h4>Server Name:</h4>"
-	Content = Content .. "<p>" .. cRoot:Get():GetServer():GetServerID() .. "</p>"
-	
 	Content = Content .. "<h4>Plugins:</h4><ul>"
-	local AllPlugins = PM:GetAllPlugins()
-	for key,value in pairs(AllPlugins) do
-		if( value ~= nil and value ~= false ) then
-			Content = Content ..  "<li>" .. key .. " (version " .. value:GetVersion() .. ")</li>"
+	PM:ForEachPlugin(
+		function (a_CBPlugin)
+			if (a_CBPlugin:IsLoaded()) then
+				Content = Content ..  "<li>" .. a_CBPlugin:GetName() .. " (version " .. a_CBPlugin:GetVersion() .. ")</li>"
+			end
 		end
-	end
+	)
 	
 	Content = Content .. "</ul>"
 	Content = Content .. "<h4>Players:</h4><ul>"
 	
-	local AddPlayerToTable = function( Player )
-		Content = Content .. "<li>" .. Player:GetName() .. "</li>"
-	end
-	cRoot:Get():ForEachPlayer( AddPlayerToTable )
+	cRoot:Get():ForEachPlayer(
+		function(a_CBPlayer)
+			Content = Content .. "<li>" .. Player:GetName() .. "</li>"
+		end
+	)
 	
 	Content = Content .. "</ul><br>";
 
@@ -102,9 +101,8 @@ function ShowPage(WebAdmin, TemplateRequest)
 			<div class="upper">
 				<div class="wrapper">
 					<ul class="menu top_links">
-						<li><a>Server Name: <strong>]] .. cRoot:Get():GetServer():GetServerID() .. [[</strong></a></li>
 						<li><a>Players online: <strong>]] .. NumPlayers .. [[</strong></a></li>
-						<li><a>Memory: <strong>]] .. MemoryUsageKiB / 1024 .. [[MB</strong></a></li>
+						<li><a>Memory: <strong>]] .. string.format("%.2f", MemoryUsageKiB / 1024) .. [[MB</strong></a></li>
 						<li><a>Chunks: <strong>]] .. NumChunks .. [[</strong></a></li>
 					</ul>
 					<div class="welcome"><strong>Welcome back, ]] .. TemplateRequest.Request.Username .. [[</strong>&nbsp;&nbsp;&nbsp;<a href=".././"><img src="/log_out.png" style="vertical-align:bottom;"> Log Out</a></div>
