@@ -19,7 +19,7 @@
 #include "Enchantments.h"
 #include "UI/SlotArea.h"
 #include "json/json.h"
-#include "ChunkSender.h"
+#include "Protocol/ChunkSender.h"
 
 
 #include <array>

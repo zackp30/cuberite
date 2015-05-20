@@ -25,7 +25,6 @@ SET (SRCS
 	Chunk.cpp
 	ChunkData.cpp
 	ChunkMap.cpp
-	ChunkSender.cpp
 	ChunkStay.cpp
 	ClientHandle.cpp
 	CommandOutput.cpp
@@ -90,7 +89,6 @@ SET (HDRS
 	ChunkDataCallback.h
 	ChunkDef.h
 	ChunkMap.h
-	ChunkSender.h
 	ChunkStay.h
 	ClientHandle.h
 	CommandOutput.h

@@ -14,7 +14,7 @@
 #include "WorldStorage/WorldStorage.h"
 #include "Generating/ChunkGenerator.h"
 #include "Vector3.h"
-#include "ChunkSender.h"
+#include "Protocol/ChunkSender.h"
 #include "Defines.h"
 #include "LightingThread.h"
 #include "Item.h"

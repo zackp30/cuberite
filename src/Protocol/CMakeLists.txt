@@ -6,6 +6,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/../")
 
 SET (SRCS
 	Authenticator.cpp
+	ChunkSender.cpp
 	ChunkDataSerializer.cpp
 	MojangAPI.cpp
 	Packetizer.cpp
@@ -16,6 +17,7 @@ SET (SRCS
 
 SET (HDRS
 	Authenticator.h
+	ChunkSender.h
 	ChunkDataSerializer.h
 	MojangAPI.h
 	Packetizer.h
