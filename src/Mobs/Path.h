@@ -1,16 +1,13 @@
 
 #pragma once
 
-/* Wanna use the pathfinder? Put this in your header file:
-
-// Fwd: cPath
+/*
+// Needed Fwds: cPath
 enum class ePathFinderStatus;
 class cPath;
-
-Put this in your .cpp:
-#include "...Path.h"
 */
 
+#include "../FastRandom.h"
 #ifdef COMPILING_PATHFIND_DEBUGGER
 	/* Note: the COMPILING_PATHFIND_DEBUGGER flag is used by Native / WiseOldMan95 to debug
 	this class outside of MCServer. This preprocessor flag is never set when compiling MCServer. */
@@ -71,8 +68,8 @@ public:
 	@param a_MaxSteps The maximum steps before giving up. */
 	cPath(
 		cChunk & a_Chunk,
-		const Vector3i & a_StartingPoint, const Vector3i & a_EndingPoint, int a_MaxSteps,
-		double a_BoundingBoxWidth = 1, double a_BoundingBoxHeight = 2,
+		const Vector3d & a_StartingPoint, const Vector3d & a_EndingPoint, int a_MaxSteps,
+		double a_BoundingBoxWidth, double a_BoundingBoxHeight,
 		int a_MaxUp = 1, int a_MaxDown = 1
 	);
 
@@ -92,10 +89,11 @@ public:
 
 	/* Point retrieval functions, inlined for performance. */
 	/** Returns the next point in the path. */
-	inline Vector3i GetNextPoint()
+	inline Vector3d GetNextPoint()
 	{
 		ASSERT(m_Status == ePathFinderStatus::PATH_FOUND);
-		return m_PathPoints[m_PathPoints.size() - 1 - (++m_CurrentPoint)];
+		Vector3i Point = m_PathPoints[m_PathPoints.size() - 1 - (++m_CurrentPoint)];
+		return Vector3d(Point.x + m_HalfWidth, Point.y, Point.z + m_HalfWidth);
 	}
 	/** Checks whether this is the last point or not. Never call getnextPoint when this is true. */
 	inline bool IsLastPoint()
@@ -109,11 +107,12 @@ public:
 		return (m_CurrentPoint == 0);
 	}
 	/** Get the point at a_index. Remark: Internally, the indexes are reversed. */
-	inline Vector3i GetPoint(size_t a_index)
+	inline Vector3d GetPoint(size_t a_index)
 	{
 		ASSERT(m_Status == ePathFinderStatus::PATH_FOUND);
 		ASSERT(a_index < m_PathPoints.size());
-		return m_PathPoints[m_PathPoints.size() - 1 - a_index];
+		Vector3i Point = m_PathPoints[m_PathPoints.size() - 1 - a_index];
+		return Vector3d(Point.x + m_HalfWidth, Point.y, Point.z + m_HalfWidth);
 	}
 	/** Returns the total number of points this path has. */
 	inline int GetPointCount()
@@ -164,8 +163,12 @@ private:
 	std::unordered_map<Vector3i, cPathCell, VectorHasher> m_Map;
 	Vector3i m_Destination;
 	Vector3i m_Source;
+	int m_BoundingBoxWidth;
+	int m_BoundingBoxHeight;
+	double m_HalfWidth;
 	int m_StepsLeft;
 	cPathCell * m_NearestPointToTarget;
+	cFastRandom m_Rand;
 
 	/* Control fields */
 	ePathFinderStatus m_Status;

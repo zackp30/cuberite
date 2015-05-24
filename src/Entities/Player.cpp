@@ -94,7 +94,7 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 
 	SetMaxHealth(MAX_HEALTH);
 	m_Health = MAX_HEALTH;
-	
+
 	m_LastPlayerListTime = std::chrono::steady_clock::now();
 	m_PlayerName = a_PlayerName;
 
@@ -106,7 +106,7 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 		SetPosY(World->GetSpawnY());
 		SetPosZ(World->GetSpawnZ());
 		SetBedPos(Vector3i(static_cast<int>(World->GetSpawnX()), static_cast<int>(World->GetSpawnY()), static_cast<int>(World->GetSpawnZ())));
-		
+
 		LOGD("Player \"%s\" is connecting for the first time, spawning at default world spawn {%.2f, %.2f, %.2f}",
 			a_PlayerName.c_str(), GetPosX(), GetPosY(), GetPosZ()
 		);
@@ -128,7 +128,14 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 			m_IsFlying = true;
 		}
 	}
-	
+
+	if (m_GameMode == gmSpectator)  // If player is reconnecting to the server in spectator mode
+	{
+		m_CanFly = true;
+		m_IsFlying = true;
+		m_bVisible = false;
+	}
+
 	cRoot::Get()->GetServer()->PlayerCreated(this);
 }
 
@@ -145,17 +152,17 @@ cPlayer::~cPlayer(void)
 	}
 
 	LOGD("Deleting cPlayer \"%s\" at %p, ID %d", GetName().c_str(), this, GetUniqueID());
-	
+
 	// Notify the server that the player is being destroyed
 	cRoot::Get()->GetServer()->PlayerDestroying(this);
 
 	SaveToDisk();
 
 	m_ClientHandle = nullptr;
-	
+
 	delete m_InventoryWindow;
 	m_InventoryWindow = nullptr;
-	
+
 	LOGD("Player %p deleted", this);
 }
 
@@ -201,7 +208,7 @@ void cPlayer::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 			m_ClientHandle = nullptr;
 			return;
 		}
-		
+
 		if (!m_ClientHandle->IsPlaying())
 		{
 			// We're not yet in the game, ignore everything
@@ -210,21 +217,21 @@ void cPlayer::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 	}
 
 	m_Stats.AddValue(statMinutesPlayed, 1);
-	
+
 	if (!a_Chunk.IsValid())
 	{
 		// This may happen if the cPlayer is created before the chunks have the chance of being loaded / generated (#83)
 		return;
 	}
-	
+
 	super::Tick(a_Dt, a_Chunk);
-	
+
 	// Handle charging the bow:
 	if (m_IsChargingBow)
 	{
 		m_BowCharge += 1;
 	}
-	
+
 	// Handle updating experience
 	if (m_bDirtyExperience)
 	{
@@ -236,7 +243,7 @@ void cPlayer::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 	{
 		// Apply food exhaustion from movement:
 		ApplyFoodExhaustionFromMovement();
-		
+
 		if (cRoot::Get()->GetPluginManager()->CallHookPlayerMoving(*this, m_LastPos, GetPosition()))
 		{
 			CanMove = false;
@@ -257,10 +264,10 @@ void cPlayer::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 		{
 			FinishEating();
 		}
-		
+
 		HandleFood();
 	}
-	
+
 	if (m_IsFishing)
 	{
 		HandleFloater();
@@ -460,7 +467,7 @@ void cPlayer::SetTouchGround(bool a_bTouchGround)
 	{
 		return;
 	}
-	
+
 	m_bTouchGround = a_bTouchGround;
 
 	if (!m_bTouchGround)
@@ -509,7 +516,7 @@ void cPlayer::SetTouchGround(bool a_bTouchGround)
 		{
 			// cPlayer makes sure damage isn't applied in creative, no need to check here
 			TakeDamage(dtFalling, nullptr, Damage, Damage, 0);
-			
+
 			// Fall particles
 			GetWorld()->BroadcastSoundParticleEffect(2006, POSX_TOINT, static_cast<int>(GetPosY()) - 1, POSZ_TOINT, Damage /* Used as particle effect speed modifier */);
 		}
@@ -541,7 +548,7 @@ void cPlayer::SetFoodLevel(int a_FoodLevel)
 		m_FoodSaturationLevel = 5.0;
 		return;
 	}
-	
+
 	m_FoodLevel = FoodLevel;
 	SendHealth();
 }
@@ -609,7 +616,7 @@ void cPlayer::StartEating(void)
 {
 	// Set the timer:
 	m_EatingFinishTick = m_World->GetWorldAge() + EATING_TICKS;
-	
+
 	// Send the packets:
 	m_World->BroadcastEntityAnimation(*this, 3);
 	m_World->BroadcastEntityMetadata(*this);
@@ -623,7 +630,7 @@ void cPlayer::FinishEating(void)
 {
 	// Reset the timer:
 	m_EatingFinishTick = -1;
-	
+
 	// Send the packets:
 	m_ClientHandle->SendEntityStatus(*this, esPlayerEatingAccepted);
 	m_World->BroadcastEntityMetadata(*this);
@@ -757,7 +764,7 @@ void cPlayer::SetSprintingMaxSpeed(double a_Speed)
 void cPlayer::SetFlyingMaxSpeed(double a_Speed)
 {
 	m_FlyingMaxSpeed = a_Speed;
-	
+
 	// Update the flying speed, always:
 	m_ClientHandle->SendPlayerAbilities();
 }
@@ -769,7 +776,7 @@ void cPlayer::SetFlyingMaxSpeed(double a_Speed)
 void cPlayer::SetCrouch(bool a_IsCrouched)
 {
 	// Set the crouch status, broadcast to all visible players
-	
+
 	if (a_IsCrouched == m_IsCrouched)
 	{
 		// No change
@@ -790,7 +797,7 @@ void cPlayer::SetSprint(bool a_IsSprinting)
 		// No change
 		return;
 	}
-	
+
 	m_IsSprinting = a_IsSprinting;
 	m_ClientHandle->SendPlayerMaxSpeed();
 }
@@ -876,7 +883,7 @@ bool cPlayer::DoTakeDamage(TakeDamageInfo & a_TDI)
 			}
 		}
 	}
-	
+
 	if (super::DoTakeDamage(a_TDI))
 	{
 		// Any kind of damage adds food exhaustion
@@ -1005,7 +1012,7 @@ void cPlayer::Respawn(void)
 
 	m_Health = GetMaxHealth();
 	SetInvulnerableTicks(20);
-	
+
 	// Reset food level:
 	m_FoodLevel = MAX_FOOD_LEVEL;
 	m_FoodSaturationLevel = 5.0;
@@ -1017,7 +1024,7 @@ void cPlayer::Respawn(void)
 	// ToDo: send score to client? How?
 
 	m_ClientHandle->SendRespawn(GetWorld()->GetDimension(), true);
-	
+
 	// Extinguish the fire:
 	StopBurning();
 
@@ -1151,7 +1158,7 @@ void cPlayer::CloseWindow(bool a_CanRefuse)
 		m_CurrentWindow = m_InventoryWindow;
 		return;
 	}
-	
+
 	if (m_CurrentWindow->ClosedByPlayer(*this, a_CanRefuse) || !a_CanRefuse)
 	{
 		// Close accepted, go back to inventory window (the default):
@@ -1189,21 +1196,17 @@ void cPlayer::SetGameMode(eGameMode a_GameMode)
 		LOGWARNING("%s: Setting invalid gamemode: %d", GetName().c_str(), a_GameMode);
 		return;
 	}
-	
+
 	if (m_GameMode == a_GameMode)
 	{
 		// Gamemode already set
 		return;
 	}
-	
+
 	m_GameMode = a_GameMode;
 	m_ClientHandle->SendGameMode(a_GameMode);
 
-	if (!(IsGameModeCreative() || IsGameModeSpectator()))
-	{
-		SetFlying(false);
-		SetCanFly(false);
-	}
+	SetCapabilities();
 
 	m_World->BroadcastPlayerListUpdateGameMode(*this);
 }
@@ -1215,6 +1218,30 @@ void cPlayer::SetGameMode(eGameMode a_GameMode)
 void cPlayer::LoginSetGameMode( eGameMode a_GameMode)
 {
 	m_GameMode = a_GameMode;
+
+	SetCapabilities();
+}
+
+
+
+
+
+void cPlayer::SetCapabilities()
+{
+	if (!IsGameModeCreative() || IsGameModeSpectator())
+	{
+		SetFlying(false);
+		SetCanFly(false);
+	}
+
+	if (IsGameModeSpectator())
+	{
+		SetVisible(false);
+	}
+	else
+	{
+		SetVisible(true);
+	}
 }
 
 
@@ -1306,12 +1333,12 @@ void cPlayer::SendRotation(double a_YawDegrees, double a_PitchDegrees)
 Vector3d cPlayer::GetThrowStartPos(void) const
 {
 	Vector3d res = GetEyePosition();
-	
+
 	// Adjust the position to be just outside the player's bounding box:
 	res.x += 0.16 * cos(GetPitch());
 	res.y += -0.1;
 	res.z += 0.16 * sin(GetPitch());
-	
+
 	return res;
 }
 
@@ -1323,9 +1350,9 @@ Vector3d cPlayer::GetThrowSpeed(double a_SpeedCoeff) const
 {
 	Vector3d res = GetLookVector();
 	res.Normalize();
-	
+
 	// TODO: Add a slight random change (+-0.0075 in each direction)
-	
+
 	return res * a_SpeedCoeff;
 }
 
@@ -1370,13 +1397,13 @@ void cPlayer::MoveTo( const Vector3d & a_NewPos)
 		}
 		return;
 	}
-	
+
 	// TODO: should do some checks to see if player is not moving through terrain
 	// TODO: Official server refuses position packets too far away from each other, kicking "hacked" clients; we should, too
 
 	Vector3d DeltaPos = a_NewPos - GetPosition();
 	UpdateMovementStats(DeltaPos);
-	
+
 	SetPosition( a_NewPos);
 	SetStance(a_NewPos.y + 1.62);
 }
@@ -1411,7 +1438,7 @@ bool cPlayer::HasPermission(const AString & a_Permission)
 		// Empty permission request is always granted
 		return true;
 	}
-	
+
 	AStringVector Split = StringSplit(a_Permission, ".");
 
 	// Iterate over all restrictions; if any matches, then return failure:
@@ -1583,7 +1610,7 @@ void cPlayer::TossItems(const cItems & a_Items)
 	{
 		return;
 	}
-	
+
 	m_Stats.AddValue(statItemsDropped, (StatValue)a_Items.Size());
 
 	double vX = 0, vY = 0, vZ = 0;
@@ -1605,10 +1632,11 @@ bool cPlayer::DoMoveToWorld(cWorld * a_World, bool a_ShouldSendRespawn)
 		// Don't move to same world
 		return false;
 	}
-	
-	if (cRoot::Get()->GetPluginManager()->CallHookEntityChangeWorld(*this, *a_World))
+
+	//  Ask the plugins if the player is allowed to changing the world
+	if (cRoot::Get()->GetPluginManager()->CallHookEntityChangingWorld(*this, *a_World))
 	{
-		// A Plugin doesn't allow the player to change the world
+		// A Plugin doesn't allow the player to changing the world
 		return false;
 	}
 
@@ -1641,7 +1669,7 @@ bool cPlayer::DoMoveToWorld(cWorld * a_World, bool a_ShouldSendRespawn)
 
 	// Broadcast the player into the new world.
 	a_World->BroadcastSpawnEntity(*this);
-	
+
 	// Player changed the world, call the hook
 	cRoot::Get()->GetPluginManager()->CallHookEntityChangedWorld(*this, *OldWorld);
 
@@ -1661,7 +1689,7 @@ bool cPlayer::LoadFromDisk(cWorldPtr & a_World)
 	{
 		return true;
 	}
-	
+
 	// Load from the offline UUID file, if allowed:
 	AString OfflineUUID = cClientHandle::GenerateOfflineUUID(GetName());
 	const char * OfflineUsage = " (unused)";
@@ -1673,7 +1701,7 @@ bool cPlayer::LoadFromDisk(cWorldPtr & a_World)
 			return true;
 		}
 	}
-	
+
 	// Load from the old-style name-based file, if allowed:
 	if (cRoot::Get()->GetServer()->ShouldLoadNamedPlayerData())
 	{
@@ -1688,7 +1716,7 @@ bool cPlayer::LoadFromDisk(cWorldPtr & a_World)
 			return true;
 		}
 	}
-	
+
 	// None of the files loaded successfully
 	LOG("Player data file not found for %s (%s, offline %s%s), will be reset to defaults.",
 		GetName().c_str(), m_UUID.c_str(), OfflineUUID.c_str(), OfflineUsage
@@ -1765,7 +1793,7 @@ bool cPlayer::LoadFromFile(const AString & a_FileName, cWorldPtr & a_World)
 	{
 		m_CanFly = true;
 	}
-	
+
 	m_Inventory.LoadFromJson(root["inventory"]);
 	cEnderChestEntity::LoadFromJson(root["enderchestinventory"], m_EnderChestContents);
 
@@ -1784,11 +1812,11 @@ bool cPlayer::LoadFromFile(const AString & a_FileName, cWorldPtr & a_World)
 	// We use the default world name (like bukkit) because stats are shared between dimensions / worlds.
 	cStatSerializer StatSerializer(cRoot::Get()->GetDefaultWorld()->GetName(), GetName(), &m_Stats);
 	StatSerializer.Load();
-	
+
 	LOGD("Player %s was read from file \"%s\", spawning at {%.2f, %.2f, %.2f} in world \"%s\"",
 		GetName().c_str(), a_FileName.c_str(), GetPosX(), GetPosY(), GetPosZ(), a_World->GetName().c_str()
 	);
-	
+
 	return true;
 }
 
@@ -2144,7 +2172,7 @@ void cPlayer::ApplyFoodExhaustionFromMovement()
 	{
 		return;
 	}
-	
+
 	// Calculate the distance travelled, update the last pos:
 	Vector3d Movement(GetPosition() - m_LastPos);
 	Movement.y = 0;  // Only take XZ movement into account
@@ -2347,7 +2375,7 @@ AString cPlayer::GetUUIDFileName(const AString & a_UUID)
 {
 	AString UUID = cMojangAPI::MakeUUIDDashed(a_UUID);
 	ASSERT(UUID.length() == 36);
-	
+
 	AString res("players/");
 	res.append(UUID, 0, 2);
 	res.push_back('/');
@@ -2355,7 +2383,3 @@ AString cPlayer::GetUUIDFileName(const AString & a_UUID)
 	res.append(".json");
 	return res;
 }
-
-
-
-
