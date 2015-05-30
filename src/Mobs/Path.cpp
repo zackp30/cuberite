@@ -46,18 +46,18 @@ cPath::cPath(
 
 	a_BoundingBoxWidth = 1;  // Until we improve physics, if ever.
 
-	m_BoundingBoxWidth = ceil(a_BoundingBoxWidth);
-	m_BoundingBoxHeight = ceil(a_BoundingBoxHeight);
+	m_BoundingBoxWidth = CeilC(a_BoundingBoxWidth);
+	m_BoundingBoxHeight = CeilC(a_BoundingBoxHeight);
 	m_HalfWidth = a_BoundingBoxWidth / 2;
 
-	int HalfWidthInt = a_BoundingBoxWidth / 2;
-	m_Source.x = floor(a_StartingPoint.x - HalfWidthInt);
-	m_Source.y = floor(a_StartingPoint.y);
-	m_Source.z = floor(a_StartingPoint.z - HalfWidthInt);
+	int HalfWidthInt = FloorC(a_BoundingBoxWidth / 2);
+	m_Source.x = FloorC(a_StartingPoint.x - HalfWidthInt);
+	m_Source.y = FloorC(a_StartingPoint.y);
+	m_Source.z = FloorC(a_StartingPoint.z - HalfWidthInt);
 
-	m_Destination.x = floor(a_EndingPoint.x - HalfWidthInt);
-	m_Destination.y = floor(a_EndingPoint.y);
-	m_Destination.z = floor(a_EndingPoint.z - HalfWidthInt);
+	m_Destination.x = FloorC(a_EndingPoint.x - HalfWidthInt);
+	m_Destination.y = FloorC(a_EndingPoint.y);
+	m_Destination.z = FloorC(a_EndingPoint.z - HalfWidthInt);
 
 	if (GetCell(m_Source)->m_IsSolid || GetCell(m_Destination)->m_IsSolid)
 	{
@@ -157,8 +157,14 @@ bool cPath::IsSolid(const Vector3i & a_Location)
 	int RelZ = a_Location.z - m_Chunk->GetPosZ() * cChunkDef::Width;
 
 	m_Chunk->GetBlockTypeMeta(RelX, a_Location.y, RelZ, BlockType, BlockMeta);
-	if ((BlockType == E_BLOCK_FENCE) || (BlockType == E_BLOCK_FENCE_GATE))
+	if (
+			(BlockType == E_BLOCK_FENCE) ||
+			(BlockType == E_BLOCK_FENCE_GATE) ||
+			(BlockType == E_BLOCK_NETHER_BRICK_FENCE) ||
+			((BlockType >= E_BLOCK_SPRUCE_FENCE_GATE) && (BlockType <= E_BLOCK_ACACIA_FENCE))
+		)
 	{
+		// TODO move this out of IsSolid to a proper place.
 		GetCell(a_Location + Vector3i(0, 1, 0))->m_IsSolid = true;  // Mobs will always think that the fence is 2 blocks high and therefore won't jump over.
 	}
 	if (BlockType == E_BLOCK_STATIONARY_WATER)
@@ -216,28 +222,35 @@ bool cPath::Step_Internal()
 	ProcessIfWalkable(CurrentCell->m_Location + Vector3i(0, 0, -1), CurrentCell, 10);
 
 	// Check diagonals on XY plane.
+	// x = -1: west, x = 1: east.
 	for (int x = -1; x <= 1; x += 2)
 	{
 		if (GetCell(CurrentCell->m_Location + Vector3i(x, 0, 0))->m_IsSolid)  // If there's a solid our east / west.
 		{
-			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(x, 1, 0), CurrentCell, JUMP_G_COST);  // Check east / west-up.
+			if (!GetCell(CurrentCell->m_Location + Vector3i(0, 1, 0))->m_IsSolid)  // If there isn't a solid above.
+			{
+				ProcessIfWalkable(CurrentCell->m_Location + Vector3i(x, 1, 0), CurrentCell, JUMP_G_COST);  // Check east-up / west-up.
+			}
 		}
 		else
 		{
-			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(x, -1, 0), CurrentCell, 14);  // Else check east / west-down.
+			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(x, -1, 0), CurrentCell, 14);  // Else check east-down / west-down.
 		}
 	}
 
 	// Check diagonals on the YZ plane.
 	for (int z = -1; z <= 1; z += 2)
 	{
-		if (GetCell(CurrentCell->m_Location + Vector3i(0, 0, z))->m_IsSolid)  // If there's a solid our east / west.
+		if (GetCell(CurrentCell->m_Location + Vector3i(0, 0, z))->m_IsSolid)  // If there's a solid our north / south.
 		{
-			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(0, 1, z), CurrentCell, JUMP_G_COST);  // Check east / west-up.
+			if (!GetCell(CurrentCell->m_Location + Vector3i(0, 1, 0))->m_IsSolid)  // If there isn't a solid above.
+			{
+				ProcessIfWalkable(CurrentCell->m_Location + Vector3i(0, 1, z), CurrentCell, JUMP_G_COST);  // Check north-up / south-up.
+			}
 		}
 		else
 		{
-			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(0, -1, z), CurrentCell, 14);  // Else check east / west-down.
+			ProcessIfWalkable(CurrentCell->m_Location + Vector3i(0, -1, z), CurrentCell, 14);  // Else check north-down / south-down.
 		}
 	}
 
