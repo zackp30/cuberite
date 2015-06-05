@@ -16,14 +16,8 @@ macro (add_flags_lnk FLAGS)
 endmacro()
 
 macro(add_flags_cxx FLAGS)
-	#set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS}          ${FLAGS}")
-	#set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS}            ${FLAGS}")
-	set(CMAKE_CXX_FLAGS_DEBUG    "${CMAKE_CXX_FLAGS_DEBUG}    ${FLAGS}")
-	set(CMAKE_C_FLAGS_DEBUG      "${CMAKE_C_FLAGS_DEBUG}      ${FLAGS}")
-	set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} ${FLAGS}")
-	set(CMAKE_C_FLAGS_COVERAGE   "${CMAKE_C_FLAGS_COVERAGE}   ${FLAGS}")
-	set(CMAKE_CXX_FLAGS_RELEASE  "${CMAKE_CXX_FLAGS_RELEASE}  ${FLAGS}")
-	set(CMAKE_C_FLAGS_RELEASE    "${CMAKE_C_FLAGS_RELEASE}    ${FLAGS}")
+	set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} ${FLAGS}")
+	set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS}   ${FLAGS}")
 endmacro()
 
 
@@ -69,7 +63,7 @@ macro(set_flags)
 		set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
 		set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /LTCG")
 	elseif(APPLE)
-	
+
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 			execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
                 		OUTPUT_VARIABLE GCC_VERSION)
@@ -268,8 +262,11 @@ macro(set_exe_flags)
 				add_flags_cxx("-Wno-documentation")
 			endif()
 			if ("${CLANG_VERSION}" VERSION_GREATER 3.5)
-				# Use this flag to ignore error for a reserved macro problem in sqlite 3
-				add_flags_cxx("-Wno-reserved-id-macro")
+				check_cxx_compiler_flag(-Wno-reserved-id-macro HAS_NO_RESERVED_ID_MACRO)
+				if (HAS_NO_RESERVED_ID_MACRO)
+					# Use this flag to ignore error for a reserved macro problem in sqlite 3
+					add_flags_cxx("-Wno-reserved-id-macro")
+				endif()
 			endif()
 		endif()
 	endif()
@@ -283,7 +280,7 @@ endmacro()
 #			set_source_files_properties(${FILENAME} PROPERTIES COMPILE_FLAGS "-Wno-error=missing-prototypes -Wno-error=deprecated")
 #			set_source_files_properties(${FILENAME} PROPERTIES COMPILE_FLAGS "-Wno-error=shadow -Wno-error=old-style-cast  -Wno-error=switch-enum -Wno-error=switch")
 #			set_source_files_properties(${FILENAME} PROPERTIES COMPILE_FLAGS "-Wno-error=float-equal -Wno-error=global-constructors")
-			
+
 #			if ("${CLANG_VERSION}" VERSION_GREATER 3.0)
 #				# flags that are not present in 3.0
 #				set_source_files_properties(${FILENAME} PROPERTIES COMPILE_FLAGS "-Wno-error=covered-switch-default ")
@@ -292,4 +289,3 @@ endmacro()
 #			endif()
 #		endforeach()
 #	endif()
-

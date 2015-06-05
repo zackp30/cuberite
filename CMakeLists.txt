@@ -3,6 +3,11 @@ cmake_minimum_required (VERSION 2.8.7)
 # Without this, the MSVC variable isn't defined for MSVC builds ( http://www.cmake.org/pipermail/cmake/2011-November/047130.html )
 enable_language(CXX C)
 
+# Enable the support for solution folders in MSVC
+if (MSVC)
+	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+endif()
+
 # These env variables are used for configuring Travis CI builds.
 # See https://github.com/mc-server/MCServer/pull/767
 if(DEFINED ENV{TRAVIS_MCSERVER_BUILD_TYPE})
@@ -19,6 +24,7 @@ if(DEFINED ENV{TRAVIS_BUILD_WITH_COVERAGE})
 endif()
 
 if(DEFINED ENV{MCSERVER_BUILD_ID})
+	# The build info is defined by the build system (Travis / Jenkins)
 	set(BUILD_ID $ENV{MCSERVER_BUILD_ID})
 	set(BUILD_SERIES_NAME $ENV{MCSERVER_BUILD_SERIES_NAME})
 	set(BUILD_DATETIME $ENV{MCSERVER_BUILD_DATETIME})
@@ -29,12 +35,41 @@ if(DEFINED ENV{MCSERVER_BUILD_ID})
 		execute_process(
 			COMMAND git rev-parse HEAD
 			RESULT_VARIABLE GIT_EXECUTED
-			OUTPUT_VARIABLE BUILD_COMMIT_ID)
-			string(STRIP ${BUILD_COMMIT_ID} BUILD_COMMIT_ID)
+			OUTPUT_VARIABLE BUILD_COMMIT_ID
+		)
+		string(STRIP ${BUILD_COMMIT_ID} BUILD_COMMIT_ID)
 		if (NOT (GIT_EXECUTED EQUAL 0))
 			message(FATAL_ERROR "Could not identifiy git commit id")
 		endif()
 	endif()
+else()
+	# This is a local build, stuff in some basic info:
+	set(BUILD_ID "Unknown")
+	set(BUILD_SERIES_NAME "local build")
+	execute_process(
+		COMMAND git rev-parse HEAD
+		RESULT_VARIABLE GIT_EXECUTED
+		OUTPUT_VARIABLE BUILD_COMMIT_ID
+	)
+	if (NOT(GIT_EXECUTED EQUAL 0))
+		set(BUILD_COMMIT_ID "Unknown")
+	endif()
+	string(STRIP ${BUILD_COMMIT_ID} BUILD_COMMIT_ID)
+	execute_process(
+		COMMAND git log -1 --date=iso --pretty=format:%ai
+		RESULT_VARIABLE GIT_EXECUTED
+		OUTPUT_VARIABLE BUILD_DATETIME
+	)
+	if (NOT(GIT_EXECUTED EQUAL 0))
+		set(BUILD_DATETIME "Unknown")
+	endif()
+	string(STRIP ${BUILD_DATETIME} BUILD_DATETIME)
+
+	# The BUILD_COMMIT_ID and BUILD_DATETIME aren't updated on each repo pull
+	# They are only updated when cmake re-configures the project
+	# Therefore mark them as "approx: "
+	set(BUILD_COMMIT_ID "approx: ${BUILD_COMMIT_ID}")
+	set(BUILD_DATETIME "approx: ${BUILD_DATETIME}")
 endif()
 
 # We need C++11 features, Visual Studio has those from VS2012, but it needs a new platform toolset for those; VS2013 supports them natively:
@@ -67,6 +102,7 @@ if(${BUILD_UNSTABLE_TOOLS})
 	add_subdirectory(Tools/GeneratorPerformanceTest/)
 endif()
 
+include(CheckCXXCompilerFlag)
 include(SetFlags.cmake)
 set_flags()
 set_lib_flags()
@@ -130,7 +166,7 @@ add_subdirectory(lib/sqlite/)
 add_subdirectory(lib/SQLiteCpp/)
 add_subdirectory(lib/expat/)
 add_subdirectory(lib/luaexpat/)
-add_subdirectory(lib/libevent/)
+add_subdirectory(lib/libevent/ EXCLUDE_FROM_ALL)
 
 # Add proper include directories so that SQLiteCpp can find SQLite3:
 get_property(SQLITECPP_INCLUDES DIRECTORY "lib/SQLiteCpp/" PROPERTY INCLUDE_DIRECTORIES)
@@ -158,5 +194,15 @@ if(${SELF_TEST})
 	message("Tests enabled")
 	enable_testing()
 	add_subdirectory (tests)
+endif()
+
+# Put project into solution folders in MSVC:
+if (MSVC)
+	set_target_properties(event_core event_extra expat jsoncpp lua luaexpat mbedtls sqlite SQLiteCpp tolualib zlib PROPERTIES FOLDER Lib)
+	set_target_properties(luaproxy tolua PROPERTIES FOLDER Support)
+	if (${SELF_TEST})
+		set_target_properties(Network PROPERTIES FOLDER Lib)
+		set_target_properties(arraystocoords-exe coordinates-exe copies-exe copyblocks-exe creatable-exe EchoServer Google-exe ChunkBuffer NameLookup PROPERTIES FOLDER Tests)
+	endif()
 endif()
 

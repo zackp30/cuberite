@@ -247,10 +247,7 @@ void cProtocol172::SendBlockChanges(int a_ChunkX, int a_ChunkZ, const sSetBlockV
 
 void cProtocol172::SendChat(const AString & a_Message)
 {
-	ASSERT(m_State == 3);  // In game mode?
-	
-	cPacketizer Pkt(*this, 0x02);  // Chat Message packet
-	Pkt.WriteString(Printf("{\"text\":\"%s\"}", EscapeString(a_Message).c_str()));
+	this->SendChatType(a_Message, ctChatBox);
 }
 
 
@@ -259,7 +256,74 @@ void cProtocol172::SendChat(const AString & a_Message)
 
 void cProtocol172::SendChat(const cCompositeChat & a_Message)
 {
+	this->SendChatType(a_Message, ctChatBox);
+}
+
+
+
+
+
+void cProtocol172::SendChatSystem(const AString & a_Message)
+{
+	this->SendChatType(a_Message, ctSystem);
+}
+
+
+
+
+
+void cProtocol172::SendChatSystem(const cCompositeChat & a_Message)
+{
+	this->SendChatType(a_Message, ctSystem);
+}
+
+
+
+
+
+void cProtocol172::SendChatAboveActionBar(const AString & a_Message)
+{
+	this->SendChatType(a_Message, ctAboveActionBar);
+}
+
+
+
+
+
+void cProtocol172::SendChatAboveActionBar(const cCompositeChat & a_Message)
+{
+	this->SendChatType(a_Message, ctAboveActionBar);
+}
+
+
+
+
+
+void cProtocol172::SendChatType(const AString & a_Message, eChatType type)
+{
 	ASSERT(m_State == 3);  // In game mode?
+
+	if (type != ctChatBox)  // 1.7.2 doesn't support anything else
+	{
+		return;
+	}
+
+	cPacketizer Pkt(*this, 0x02);  // Chat Message packet
+	Pkt.WriteString(Printf("{\"text\":\"%s\"}", EscapeString(a_Message).c_str()));
+}
+
+
+
+
+
+void cProtocol172::SendChatType(const cCompositeChat & a_Message, eChatType type)
+{
+	ASSERT(m_State == 3);  // In game mode?
+
+	if (type != ctChatBox)  // 1.7.2 doesn't support anything else
+	{
+		return;
+	}
 
 	cWorld * World = m_Client->GetPlayer()->GetWorld();
 	bool ShouldUseChatPrefixes = (World == nullptr) ? false : World->ShouldUseChatPrefixes();

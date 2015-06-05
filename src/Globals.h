@@ -221,6 +221,7 @@ template class SizeChecker<UInt8,  1>;
 	#include <semaphore.h>
 	#include <errno.h>
 	#include <fcntl.h>
+	#include <unistd.h>
 #endif
 
 #if defined(ANDROID_NDK)
@@ -265,7 +266,6 @@ template class SizeChecker<UInt8,  1>;
 	// Common headers (part 1, without macros):
 	#include "StringUtils.h"
 	#include "OSSupport/CriticalSection.h"
-	#include "OSSupport/Semaphore.h"
 	#include "OSSupport/Event.h"
 	#include "OSSupport/File.h"
 	#include "Logger.h"
