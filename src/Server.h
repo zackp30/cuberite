@@ -12,6 +12,7 @@
 #include "RCONServer.h"
 #include "OSSupport/IsThread.h"
 #include "OSSupport/Network.h"
+#include <atomic>
 
 #ifdef _MSC_VER
 	#pragma warning(push)
@@ -65,8 +66,7 @@ public:
 	const AString & GetDescription(void) const {return m_Description; }
 
 	// Player counts:
-	int  GetMaxPlayers(void) const { return m_MaxPlayers; }
-	int  GetNumPlayers(void) const;
+	size_t  GetMaxPlayers(void) const { return m_MaxPlayers; }
 	void SetMaxPlayers(int a_MaxPlayers) { m_MaxPlayers = a_MaxPlayers; }
 	
 	/** Check if the player is queued to be transferred to a World.
@@ -109,12 +109,6 @@ public:
 	
 	/** Don't tick a_Client anymore, it will be ticked from its cPlayer instead */
 	void ClientMovedToWorld(const cClientHandle * a_Client);
-	
-	/** Notifies the server that a player was created; the server uses this to adjust the number of players */
-	void PlayerCreated(const cPlayer * a_Player);
-	
-	/** Notifies the server that a player is being destroyed; the server uses this to adjust the number of players */
-	void PlayerDestroying(const cPlayer * a_Player);
 
 	/** Returns base64 encoded favicon data (obtained from favicon.png) */
 	const AString & GetFaviconData(void) const { return m_FaviconData; }
@@ -138,6 +132,9 @@ public:
 	Read from settings, admins should set this to true only when they chain to BungeeCord,
 	it makes the server vulnerable to identity theft through direct connections. */
 	bool ShouldAllowBungeeCord(void) const { return m_ShouldAllowBungeeCord; }
+
+	/** Number of players currently playing in the server. */
+	std::atomic_size_t m_PlayerCount;
 	
 private:
 
@@ -173,18 +170,6 @@ private:
 	/** Clients that have just been moved into a world and are to be removed from m_Clients in the next Tick(). */
 	cClientHandles m_ClientsToRemove;
 	
-	/** Protects m_PlayerCount against multithreaded access. */
-	mutable cCriticalSection m_CSPlayerCount;
-
-	/** Number of players currently playing in the server. */
-	int m_PlayerCount;
-
-	/** Protects m_PlayerCountDiff against multithreaded access. */
-	cCriticalSection m_CSPlayerCountDiff;
-
-	/** Adjustment to m_PlayerCount to be applied in the Tick thread. */
-	int m_PlayerCountDiff;
-	
 	int m_ClientViewDistance;  // The default view distance for clients; settable in Settings.ini
 
 	bool m_bIsConnected;  // true - connected false - not connected
@@ -201,7 +186,7 @@ private:
 	
 	AString m_Description;
 	AString m_FaviconData;
-	int m_MaxPlayers;
+	size_t m_MaxPlayers;
 	bool m_bIsHardcore;
 	
 	/** True - allow same username to login more than once False - only once */

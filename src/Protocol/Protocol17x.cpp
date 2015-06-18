@@ -669,7 +669,7 @@ void cProtocol172::SendLogin(const cPlayer & a_Player, const cWorld & a_World)
 		Pkt.WriteBEUInt8(static_cast<Byte>(a_Player.GetEffectiveGameMode()) | (Server->IsHardcore() ? 0x08 : 0));  // Hardcore flag bit 4
 		Pkt.WriteBEInt8(static_cast<char>(a_World.GetDimension()));
 		Pkt.WriteBEUInt8(2);  // TODO: Difficulty (set to Normal)
-		Pkt.WriteBEUInt8(static_cast<Byte>(std::min(Server->GetMaxPlayers(), 60)));
+		Pkt.WriteBEUInt8(static_cast<Byte>(std::min(Server->GetMaxPlayers(), static_cast<size_t>(60))));
 		Pkt.WriteString("default");  // Level type - wtf?
 	}
 	m_LastSentDimension = a_World.GetDimension();
@@ -1858,7 +1858,7 @@ void cProtocol172::HandlePacketStatusRequest(cByteBuffer & a_ByteBuffer)
 {
 	cServer * Server = cRoot::Get()->GetServer();
 	AString ServerDescription = Server->GetDescription();
-	int NumPlayers = Server->GetNumPlayers();
+	int NumPlayers = Server->m_PlayerCount;
 	int MaxPlayers = Server->GetMaxPlayers();
 	AString Favicon = Server->GetFaviconData();
 	cRoot::Get()->GetPluginManager()->CallHookServerPing(*m_Client, ServerDescription, NumPlayers, MaxPlayers, Favicon);
@@ -3300,7 +3300,7 @@ void cProtocol176::HandlePacketStatusRequest(cByteBuffer & a_ByteBuffer)
 {
 	cServer * Server = cRoot::Get()->GetServer();
 	AString Motd = Server->GetDescription();
-	int NumPlayers = Server->GetNumPlayers();
+	int NumPlayers = Server->m_PlayerCount;
 	int MaxPlayers = Server->GetMaxPlayers();
 	AString Favicon = Server->GetFaviconData();
 	cRoot::Get()->GetPluginManager()->CallHookServerPing(*m_Client, Motd, NumPlayers, MaxPlayers, Favicon);

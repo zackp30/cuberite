@@ -133,7 +133,6 @@ void cServer::cTickThread::Execute(void)
 
 cServer::cServer(void) :
 	m_PlayerCount(0),
-	m_PlayerCountDiff(0),
 	m_ClientViewDistance(0),
 	m_bIsConnected(false),
 	m_bRestarting(false),
@@ -161,38 +160,12 @@ void cServer::ClientMovedToWorld(const cClientHandle * a_Client)
 
 
 
-void cServer::PlayerCreated(const cPlayer * a_Player)
-{
-	UNUSED(a_Player);
-	// To avoid deadlocks, the player count is not handled directly, but rather posted onto the tick thread
-	cCSLock Lock(m_CSPlayerCountDiff);
-	m_PlayerCountDiff += 1;
-}
-
-
-
-
-
-void cServer::PlayerDestroying(const cPlayer * a_Player)
-{
-	UNUSED(a_Player);
-	// To avoid deadlocks, the player count is not handled directly, but rather posted onto the tick thread
-	cCSLock Lock(m_CSPlayerCountDiff);
-	m_PlayerCountDiff -= 1;
-}
-
-
-
-
-
 bool cServer::InitServer(cSettingsRepositoryInterface & a_Settings, bool a_ShouldAuth)
 {
 	m_Description = a_Settings.GetValueSet("Server", "Description", "MCServer - in C++!");
 	m_MaxPlayers  = a_Settings.GetValueSetI("Server", "MaxPlayers", 100);
 	m_bIsHardcore = a_Settings.GetValueSetB("Server", "HardcoreEnabled", false);
 	m_bAllowMultiLogin = a_Settings.GetValueSetB("Server", "AllowMultiLogin", false);
-	m_PlayerCount = 0;
-	m_PlayerCountDiff = 0;
 
 	m_FaviconData = Base64Encode(cFile::ReadWholeFile(FILE_IO_PREFIX + AString("favicon.png")));  // Will return empty string if file nonexistant; client doesn't mind
 
@@ -256,16 +229,6 @@ bool cServer::InitServer(cSettingsRepositoryInterface & a_Settings, bool a_Shoul
 
 
 
-int cServer::GetNumPlayers(void) const
-{
-	cCSLock Lock(m_CSPlayerCount);
-	return m_PlayerCount;
-}
-
-
-
-
-
 bool cServer::IsPlayerInQueue(AString a_Username)
 {
 	cCSLock Lock(m_CSClients);
@@ -310,17 +273,6 @@ cTCPLink::cCallbacksPtr cServer::OnConnectionAccepted(const AString & a_RemoteIP
 
 bool cServer::Tick(float a_Dt)
 {
-	// Apply the queued playercount adjustments (postponed to avoid deadlocks)
-	int PlayerCountDiff = 0;
-	{
-		cCSLock Lock(m_CSPlayerCountDiff);
-		std::swap(PlayerCountDiff, m_PlayerCountDiff);
-	}
-	{
-		cCSLock Lock(m_CSPlayerCount);
-		m_PlayerCount += PlayerCountDiff;
-	}
-
 	// Send the tick to the plugins, as well as let the plugin manager reload, if asked to (issue #102):
 	cPluginManager::Get()->Tick(a_Dt);
 

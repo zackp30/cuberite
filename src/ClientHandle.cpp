@@ -317,8 +317,6 @@ void cClientHandle::Authenticate(const AString & a_Name, const AString & a_UUID,
 	}
 	
 	ASSERT(m_Player == nullptr);
-
-	m_Username = a_Name;
 	
 	// Only assign UUID and properties if not already pre-assigned (BungeeCord sends those in the Handshake packet):
 	if (m_UUID.empty())
@@ -630,26 +628,6 @@ void cClientHandle::HandleNPCTrade(int a_SlotNum)
 
 
 
-void cClientHandle::HandlePing(void)
-{
-	// Somebody tries to retrieve information about the server
-	AString Reply;
-	const cServer & Server = *cRoot::Get()->GetServer();
-
-	Printf(Reply, "%s%s%i%s%i",
-		Server.GetDescription().c_str(),
-		cChatColor::Delimiter,
-		Server.GetNumPlayers(),
-		cChatColor::Delimiter,
-		Server.GetMaxPlayers()
-	);
-	Kick(Reply);
-}
-
-
-
-
-
 bool cClientHandle::HandleLogin(int a_ProtocolVersion, const AString & a_Username)
 {
 	// If the protocol version hasn't been set yet, set it now:
@@ -657,8 +635,6 @@ bool cClientHandle::HandleLogin(int a_ProtocolVersion, const AString & a_Usernam
 	{
 		m_ProtocolVersion = a_ProtocolVersion;
 	}
-
-	m_Username = a_Username;
 
 	// Let the plugins know about this event, they may refuse the player:
 	if (cRoot::Get()->GetPluginManager()->CallHookLogin(*this, a_ProtocolVersion, a_Username))
@@ -1719,11 +1695,12 @@ bool cClientHandle::CheckMultiLogin(const AString & a_Username)
 
 bool cClientHandle::HandleHandshake(const AString & a_Username)
 {
+	cRoot::Get()->GetServer()->m_PlayerCount++;
 	if (!cRoot::Get()->GetPluginManager()->CallHookHandshake(*this, a_Username))
 	{
-		if (cRoot::Get()->GetServer()->GetNumPlayers() >= cRoot::Get()->GetServer()->GetMaxPlayers())
+		if (cRoot::Get()->GetServer()->m_PlayerCount - 1 >= cRoot::Get()->GetServer()->GetMaxPlayers())
 		{
-			Kick("The server is currently full :(-- Try again later");
+			Kick("The server is currently full :(\nTry again later?");
 			return false;
 		}
 	}
@@ -3018,6 +2995,7 @@ void cClientHandle::SocketClosed(void)
 	{
 		LOGD("Client %s @ %s disconnected", m_Username.c_str(), m_IPString.c_str());
 		cRoot::Get()->GetPluginManager()->CallHookDisconnect(*this, "Player disconnected");
+		cRoot::Get()->GetServer()->m_PlayerCount--;
 	}
 	if ((m_State < csDestroying) && (m_Player != nullptr))
 	{

@@ -2146,7 +2146,7 @@ void cProtocol180::HandlePacketStatusRequest(cByteBuffer & a_ByteBuffer)
 {
 	cServer * Server = cRoot::Get()->GetServer();
 	AString ServerDescription = Server->GetDescription();
-	int NumPlayers = Server->GetNumPlayers();
+	int NumPlayers = Server->m_PlayerCount;
 	int MaxPlayers = Server->GetMaxPlayers();
 	AString Favicon = Server->GetFaviconData();
 	cRoot::Get()->GetPluginManager()->CallHookServerPing(*m_Client, ServerDescription, NumPlayers, MaxPlayers, Favicon);
@@ -2258,6 +2258,7 @@ void cProtocol180::HandlePacketLoginStart(cByteBuffer & a_ByteBuffer)
 		m_Client->Kick("Bad username");
 		return;
 	}
+	m_Client->SetUsername(Username);
 	
 	if (!m_Client->HandleHandshake(Username))
 	{
