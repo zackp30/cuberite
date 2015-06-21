@@ -138,6 +138,7 @@ set(SQLITECPP_RUN_DOXYGEN     OFF CACHE BOOL "Run Doxygen C++ documentation tool
 set(SQLITECPP_BUILD_EXAMPLES  OFF CACHE BOOL "Build examples."                                 FORCE)
 set(SQLITECPP_BUILD_TESTS     OFF CACHE BOOL "Build and run tests."                            FORCE)
 set(SQLITECPP_INTERNAL_SQLITE OFF CACHE BOOL "Add the internal SQLite3 source to the project." FORCE)
+set(SQLITE_ENABLE_COLUMN_METADATA OFF CACHE BOOL "" FORCE)
 
 # Set options for LibEvent, disable all their tests and benchmarks:
 set(EVENT__DISABLE_OPENSSL   YES CACHE BOOL "Disable OpenSSL in LibEvent"       FORCE)
@@ -196,13 +197,53 @@ if(${SELF_TEST})
 	add_subdirectory (tests)
 endif()
 
-# Put project into solution folders in MSVC:
+# Put projects into solution folders in MSVC:
 if (MSVC)
-	set_target_properties(event_core event_extra expat jsoncpp lua luaexpat mbedtls sqlite SQLiteCpp tolualib zlib PROPERTIES FOLDER Lib)
-	set_target_properties(luaproxy tolua PROPERTIES FOLDER Support)
+	set_target_properties(
+		event_core
+		event_extra
+		expat
+		jsoncpp
+		lua
+		luaexpat
+		mbedtls
+		sqlite
+		SQLiteCpp
+		tolualib
+		zlib
+		PROPERTIES FOLDER Lib
+	)
+	set_target_properties(
+		luaproxy
+		tolua
+		PROPERTIES FOLDER Support
+	)
 	if (${SELF_TEST})
-		set_target_properties(Network PROPERTIES FOLDER Lib)
-		set_target_properties(arraystocoords-exe coordinates-exe copies-exe copyblocks-exe creatable-exe EchoServer Google-exe ChunkBuffer NameLookup PROPERTIES FOLDER Tests)
+		set_target_properties(
+			Network
+			PROPERTIES FOLDER Lib
+		)
+		set_target_properties(
+			arraystocoords-exe
+			ChunkBuffer
+			coordinates-exe
+			copies-exe
+			copyblocks-exe
+			creatable-exe
+			EchoServer
+			Google-exe
+			LoadablePieces
+			NameLookup
+			PROPERTIES FOLDER Tests
+		)
+	endif()
+
+	if(${BUILD_TOOLS})
+		set_target_properties(
+			MCADefrag
+			ProtoProxy
+			PROPERTIES FOLDER Tools
+		)
 	endif()
 endif()
 

@@ -21,6 +21,7 @@
 #include "IniFile.h"
 #include "SettingsRepositoryInterface.h"
 #include "OverridesSettingsRepository.h"
+#include "SelfTests.h"
 
 #ifdef _WIN32
 	#include <conio.h>
@@ -111,11 +112,16 @@ void cRoot::Start(std::unique_ptr<cSettingsRepositoryInterface> overridesRepo)
 	cLogger::GetInstance().AttachListener(consoleLogListener);
 	cLogger::GetInstance().AttachListener(fileLogListener);
 
-	LOG("--- Started Log ---\n");
+	LOG("--- Started Log ---");
 
 	#ifdef BUILD_ID
-	LOG("MCServer " BUILD_SERIES_NAME " build id: " BUILD_ID);
-	LOG("from commit id: " BUILD_COMMIT_ID " built at: " BUILD_DATETIME);
+		LOG("MCServer " BUILD_SERIES_NAME " build id: " BUILD_ID);
+		LOG("from commit id: " BUILD_COMMIT_ID " built at: " BUILD_DATETIME);
+	#endif
+
+	// Run the self-tests registered previously via cSelfTests::Register():
+	#ifdef SELF_TEST
+		cSelfTests::ExecuteAll();
 	#endif
 
 	cDeadlockDetect dd;
@@ -255,7 +261,7 @@ void cRoot::Start(std::unique_ptr<cSettingsRepositoryInterface> overridesRepo)
 		delete m_FurnaceRecipe;   m_FurnaceRecipe = nullptr;
 		delete m_CraftingRecipes; m_CraftingRecipes = nullptr;
 
-		LOGD("Unloading worlds...");
+		LOG("Unloading worlds...");
 		UnloadWorlds();
 
 		LOGD("Stopping plugin manager...");
@@ -869,3 +875,8 @@ int cRoot::GetFurnaceFuelBurnTime(const cItem & a_Fuel)
 	cFurnaceRecipe * FR = Get()->GetFurnaceRecipe();
 	return FR->GetBurnTime(a_Fuel);
 }
+
+
+
+
+

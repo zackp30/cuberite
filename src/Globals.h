@@ -192,13 +192,12 @@ template class SizeChecker<UInt8,  1>;
 	#define WIN32_LEAN_AND_MEAN
 	#define _WIN32_WINNT _WIN32_WINNT_WS03  // We want to target Windows XP with Service Pack 2 & Windows Server 2003 with Service Pack 1 and higher
 
+	// Windows SDK defines min and max macros, messing up with our std::min and std::max usage
+	#define NOMINMAX
+
 	#include <Windows.h>
 	#include <winsock2.h>
 	#include <Ws2tcpip.h>  // IPv6 stuff
-
-	// Windows SDK defines min and max macros, messing up with our std::min and std::max usage
-	#undef min
-	#undef max
 
 	// Windows SDK defines GetFreeSpace as a constant, probably a Win16 API remnant
 	#ifdef GetFreeSpace
@@ -262,14 +261,15 @@ template class SizeChecker<UInt8,  1>;
 
 
 
+// Common headers (part 1, without macros):
+#include "StringUtils.h"
+#include "OSSupport/CriticalSection.h"
+#include "OSSupport/Event.h"
+#include "OSSupport/File.h"
+#include "OSSupport/StackTrace.h"
+
 #ifndef TEST_GLOBALS
-	// Common headers (part 1, without macros):
-	#include "StringUtils.h"
-	#include "OSSupport/CriticalSection.h"
-	#include "OSSupport/Event.h"
-	#include "OSSupport/File.h"
 	#include "Logger.h"
-	#include "OSSupport/StackTrace.h"
 #else
 	// Logging functions
 void inline LOGERROR(const char * a_Format, ...) FORMATSTRING(1, 2);
@@ -315,6 +315,9 @@ void inline LOG(const char * a_Format, ...)
 	putchar('\n');
 	va_end(argList);
 }
+
+#define LOGINFO LOG
+#define LOGWARN LOGWARNING
 
 #endif
 

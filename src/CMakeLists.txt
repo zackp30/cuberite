@@ -54,12 +54,14 @@ SET (SRCS
 	MobProximityCounter.cpp
 	MobSpawner.cpp
 	MonsterConfig.cpp
+	NetherPortalScanner.cpp
 	OverridesSettingsRepository.cpp
 	ProbabDistrib.cpp
 	RankManager.cpp
 	RCONServer.cpp
 	Root.cpp
 	Scoreboard.cpp
+	SelfTests.cpp
 	Server.cpp
 	SetChunkData.cpp
 	SpawnPrepare.cpp
@@ -126,12 +128,14 @@ SET (HDRS
 	MobProximityCounter.h
 	MobSpawner.h
 	MonsterConfig.h
+	NetherPortalScanner.h
 	OverridesSettingsRepository.h
 	ProbabDistrib.h
 	RankManager.h
 	RCONServer.h
 	Root.h
 	Scoreboard.h
+	SelfTests.h
 	Server.h
 	SetChunkData.h
 	SettingsRepositoryInterface.h

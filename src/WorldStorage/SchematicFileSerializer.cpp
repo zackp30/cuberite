@@ -9,6 +9,7 @@
 #include "FastNBT.h"
 #include "SchematicFileSerializer.h"
 #include "../StringCompression.h"
+#include "../SelfTests.h"
 
 
 
@@ -20,6 +21,11 @@ static class cSchematicStringSelfTest
 {
 public:
 	cSchematicStringSelfTest(void)
+	{
+		cSelfTests::Get().Register(cSelfTests::SelfTestFunction(&Test), "Schematic-to-string serialization");
+	}
+
+	static void Test(void)
 	{
 		cBlockArea ba;
 		ba.Create(21, 256, 21);
@@ -232,27 +238,27 @@ bool cSchematicFileSerializer::LoadFromSchematicNBT(cBlockArea & a_BlockArea, cP
 	}
 
 	// Copy the block types and metas:
-	size_t NumBytes = a_BlockArea.GetBlockCount();
-	if (a_NBT.GetDataLength(TBlockTypes) < NumBytes)
+	size_t NumTypeBytes = a_BlockArea.GetBlockCount();
+	if (a_NBT.GetDataLength(TBlockTypes) < NumTypeBytes)
 	{
-		LOG("BlockTypes truncated in the schematic file (exp %d, got %d bytes). Loading partial.",
-			(int)NumBytes, (int)a_NBT.GetDataLength(TBlockTypes)
+		LOG("BlockTypes truncated in the schematic file (exp %u, got %u bytes). Loading partial.",
+			static_cast<unsigned>(NumTypeBytes), static_cast<unsigned>(a_NBT.GetDataLength(TBlockTypes))
 		);
-		NumBytes = a_NBT.GetDataLength(TBlockTypes);
+		NumTypeBytes = a_NBT.GetDataLength(TBlockTypes);
 	}
-	memcpy(a_BlockArea.m_BlockTypes, a_NBT.GetData(TBlockTypes), NumBytes);
+	memcpy(a_BlockArea.m_BlockTypes, a_NBT.GetData(TBlockTypes), NumTypeBytes);
 	
 	if (AreMetasPresent)
 	{
-		size_t NumBytes = a_BlockArea.GetBlockCount();
-		if (a_NBT.GetDataLength(TBlockMetas) < NumBytes)
+		size_t NumMetaBytes = a_BlockArea.GetBlockCount();
+		if (a_NBT.GetDataLength(TBlockMetas) < NumMetaBytes)
 		{
-			LOG("BlockMetas truncated in the schematic file (exp %d, got %d bytes). Loading partial.",
-				(int)NumBytes, (int)a_NBT.GetDataLength(TBlockMetas)
+			LOG("BlockMetas truncated in the schematic file (exp %u, got %u bytes). Loading partial.",
+				static_cast<unsigned>(NumMetaBytes), static_cast<unsigned>(a_NBT.GetDataLength(TBlockMetas))
 			);
-			NumBytes = a_NBT.GetDataLength(TBlockMetas);
+			NumMetaBytes = a_NBT.GetDataLength(TBlockMetas);
 		}
-		memcpy(a_BlockArea.m_BlockMetas, a_NBT.GetData(TBlockMetas), NumBytes);
+		memcpy(a_BlockArea.m_BlockMetas, a_NBT.GetData(TBlockMetas), NumMetaBytes);
 	}
 	
 	return true;
