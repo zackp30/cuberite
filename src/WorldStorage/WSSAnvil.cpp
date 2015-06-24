@@ -107,13 +107,13 @@ cWSSAnvil::cWSSAnvil(cWorld * a_World, int a_CompressionFactor) :
 		Writer.AddByte("MapFeatures", 1);
 		Writer.AddByte("raining", a_World->IsWeatherRain() ? 1 : 0);
 		Writer.AddByte("thundering", a_World->IsWeatherStorm() ? 1 : 0);
-		Writer.AddInt("GameType", (int)a_World->GetGameMode());
+		Writer.AddInt("GameType", static_cast<int>(a_World->GetGameMode()));
 		Writer.AddInt("generatorVersion", 1);
-		Writer.AddInt("SpawnX", (int)a_World->GetSpawnX());
-		Writer.AddInt("SpawnY", (int)a_World->GetSpawnY());
-		Writer.AddInt("SpawnZ", (int)a_World->GetSpawnZ());
+		Writer.AddInt("SpawnX", FloorC(a_World->GetSpawnX()));
+		Writer.AddInt("SpawnY", FloorC(a_World->GetSpawnY()));
+		Writer.AddInt("SpawnZ", FloorC(a_World->GetSpawnZ()));
 		Writer.AddInt("version", 19133);
-		Writer.AddLong("DayTime", (Int64)a_World->GetTimeOfDay());
+		Writer.AddLong("DayTime", a_World->GetTimeOfDay());
 		Writer.AddLong("Time", a_World->GetWorldAge());
 		Writer.AddLong("SizeOnDisk", 0);
 		Writer.AddString("generatorName", "default");
@@ -122,15 +122,10 @@ cWSSAnvil::cWSSAnvil(cWorld * a_World, int a_CompressionFactor) :
 		Writer.EndCompound();
 		Writer.Finish();
 		
-		#ifdef _DEBUG
-		cParsedNBT TestParse(Writer.GetResult().data(), Writer.GetResult().size());
-		ASSERT(TestParse.IsValid());
-		#endif  // _DEBUG
-		
 		gzFile gz = gzopen((FILE_IO_PREFIX + fnam).c_str(), "wb");
 		if (gz != nullptr)
 		{
-			gzwrite(gz, Writer.GetResult().data(), (unsigned)Writer.GetResult().size());
+			gzwrite(gz, Writer.GetResult().data(), static_cast<unsigned>(Writer.GetResult().size()));
 		}
 		gzclose(gz);
 	}
@@ -682,7 +677,7 @@ cBlockEntity * cWSSAnvil::LoadBlockEntityFromNBT(const cParsedNBT & a_NBT, int a
 	AString TypeName("<unknown>");
 	if (TagID >= 0)
 	{
-		TypeName.assign(a_NBT.GetData(TagID), (size_t)a_NBT.GetDataLength(TagID));
+		TypeName.assign(a_NBT.GetData(TagID), static_cast<size_t>(a_NBT.GetDataLength(TagID)));
 	}
 	LOGINFO("WorldLoader(%s): Block entity mismatch: block type %s (%d), type \"%s\", at {%d, %d, %d}; the entity will be lost.",
 		m_World->GetName().c_str(),
@@ -802,7 +797,7 @@ void cWSSAnvil::LoadItemGridFromNBT(cItemGrid & a_ItemGrid, const cParsedNBT & a
 		{
 			continue;
 		}
-		int SlotNum = (int)(a_NBT.GetByte(SlotTag)) - a_SlotOffset;
+		int SlotNum = static_cast<int>(a_NBT.GetByte(SlotTag)) - a_SlotOffset;
 		if ((SlotNum < 0) || (SlotNum >= NumSlots))
 		{
 			// SlotNum outside of the range
@@ -836,13 +831,13 @@ bool cWSSAnvil::CheckBlockEntityType(const cParsedNBT & a_NBT, int a_TagIdx, con
 	}
 
 	// Compare the value:
-	if (strncmp(a_NBT.GetData(TagID), a_ExpectedType, (size_t)a_NBT.GetDataLength(TagID)) == 0)
+	if (strncmp(a_NBT.GetData(TagID), a_ExpectedType, static_cast<size_t>(a_NBT.GetDataLength(TagID))) == 0)
 	{
 		return true;
 	}
 	LOGWARNING("Block entity type mismatch: exp \"%s\", got \"%s\".",
 		a_ExpectedType,
-		AString(a_NBT.GetData(TagID), (size_t)a_NBT.GetDataLength(TagID)).c_str()
+		AString(a_NBT.GetData(TagID), static_cast<size_t>(a_NBT.GetDataLength(TagID))).c_str()
 	);
 	return false;
 }
@@ -864,19 +859,19 @@ cBlockEntity * cWSSAnvil::LoadBeaconFromNBT(const cParsedNBT & a_NBT, int a_TagI
 	int CurrentLine = a_NBT.FindChildByName(a_TagIdx, "Levels");
 	if (CurrentLine >= 0)
 	{
-		Beacon->SetBeaconLevel((char)a_NBT.GetInt(CurrentLine));
+		Beacon->SetBeaconLevel(static_cast<char>(a_NBT.GetInt(CurrentLine)));
 	}
 
 	CurrentLine = a_NBT.FindChildByName(a_TagIdx, "Primary");
 	if (CurrentLine >= 0)
 	{
-		Beacon->SetPrimaryEffect((cEntityEffect::eType)a_NBT.GetInt(CurrentLine));
+		Beacon->SetPrimaryEffect(static_cast<cEntityEffect::eType>(a_NBT.GetInt(CurrentLine)));
 	}
 
 	CurrentLine = a_NBT.FindChildByName(a_TagIdx, "Secondary");
 	if (CurrentLine >= 0)
 	{
-		Beacon->SetSecondaryEffect((cEntityEffect::eType)a_NBT.GetInt(CurrentLine));
+		Beacon->SetSecondaryEffect(static_cast<cEntityEffect::eType>(a_NBT.GetInt(CurrentLine)));
 	}
 
 	// We are better than mojang, we load / save the beacon inventory!
@@ -1710,7 +1705,7 @@ void cWSSAnvil::LoadTNTFromNBT(cEntityList & a_Entities, const cParsedNBT & a_NB
 	int FuseTicks = a_NBT.FindChildByName(a_TagIdx, "Fuse");
 	if (FuseTicks > 0)
 	{
-		TNT->SetFuseTicks((int) a_NBT.GetByte(FuseTicks));
+		TNT->SetFuseTicks(static_cast<int>(a_NBT.GetByte(FuseTicks)));
 	}
 	
 	a_Entities.push_back(TNT.release());
@@ -1888,7 +1883,7 @@ void cWSSAnvil::LoadArrowFromNBT(cEntityList & a_Entities, const cParsedNBT & a_
 				case TAG_Short:
 				{
 					// Vanilla uses this
-					Arrow->SetBlockHit(Vector3i((int)a_NBT.GetShort(InBlockXIdx), (int)a_NBT.GetShort(InBlockYIdx), (int)a_NBT.GetShort(InBlockZIdx)));
+					Arrow->SetBlockHit(Vector3i(a_NBT.GetShort(InBlockXIdx), a_NBT.GetShort(InBlockYIdx), a_NBT.GetShort(InBlockZIdx)));
 					break;
 				}
 				default:
@@ -2399,7 +2394,7 @@ void cWSSAnvil::LoadSheepFromNBT(cEntityList & a_Entities, const cParsedNBT & a_
 	int Color = -1;
 	if (ColorIdx > 0)
 	{
-		Color = (int)a_NBT.GetByte(ColorIdx);
+		Color = static_cast<int>(a_NBT.GetByte(ColorIdx));
 	}
 
 	std::unique_ptr<cSheep> Monster(new cSheep(Color));
@@ -3062,15 +3057,22 @@ bool cWSSAnvil::cMCAFile::GetChunkData(const cChunkCoords & a_Chunk, AString & a
 		return false;
 	}
 	
-	m_File.Seek((int)ChunkOffset * 4096);
+	m_File.Seek(static_cast<int>(ChunkOffset * 4096));
 	
-	int ChunkSize = 0;
+	UInt32 ChunkSize = 0;
 	if (m_File.Read(&ChunkSize, 4) != 4)
 	{
 		LOAD_FAILED(a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ);
 		return false;
 	}
-	ChunkSize = ntohl((u_long)ChunkSize);
+	ChunkSize = ntohl(ChunkSize);
+	if (ChunkSize < 1)
+	{
+		// Chunk size too small
+		LOAD_FAILED(a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ);
+		return false;
+	}
+
 	char CompressionType = 0;
 	if (m_File.Read(&CompressionType, 1) != 1)
 	{
@@ -3085,9 +3087,8 @@ bool cWSSAnvil::cMCAFile::GetChunkData(const cChunkCoords & a_Chunk, AString & a
 	}
 	ChunkSize--;
 	
-	// HACK: This depends on the internal knowledge that AString's data() function returns the internal buffer directly
-	a_Data.assign(ChunkSize, '\0');
-	if (m_File.Read((void *)a_Data.data(), ChunkSize) == ChunkSize)
+	a_Data = m_File.Read(ChunkSize);
+	if (a_Data.size() == ChunkSize)
 	{
 		return true;
 	}
@@ -3134,7 +3135,7 @@ bool cWSSAnvil::cMCAFile::SetChunkData(const cChunkCoords & a_Chunk, const AStri
 		LOGWARNING("Cannot save chunk [%d, %d], writing(2) data to file \"%s\" failed", a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ, GetFileName().c_str());
 		return false;
 	}
-	if (m_File.Write(a_Data.data(), a_Data.size()) != (int)(a_Data.size()))
+	if (m_File.Write(a_Data.data(), a_Data.size()) != static_cast<int>(a_Data.size()))
 	{
 		LOGWARNING("Cannot save chunk [%d, %d], writing(3) data to file \"%s\" failed", a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ, GetFileName().c_str());
 		return false;
@@ -3153,7 +3154,7 @@ bool cWSSAnvil::cMCAFile::SetChunkData(const cChunkCoords & a_Chunk, const AStri
 	if (ChunkSize > 255)
 	{
 		LOGWARNING("Cannot save chunk [%d, %d], the data is too large (%u KiB, maximum is 1024 KiB). Remove some entities and retry.",
-			a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ, (unsigned)(ChunkSize * 4)
+			a_Chunk.m_ChunkX, a_Chunk.m_ChunkZ, static_cast<unsigned>(ChunkSize * 4)
 		);
 		return false;
 	}
