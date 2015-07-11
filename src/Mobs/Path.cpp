@@ -10,10 +10,50 @@
 
 #define DISTANCE_MANHATTAN 0  // 1: More speed, a bit less accuracy 0: Max accuracy, less speed.
 #define HEURISTICS_ONLY 0  // 1: Much more speed, much less accurate.
-#define CALCULATIONS_PER_STEP 10  // Higher means more CPU load but faster path calculations.
+#define BASELINE_CALCULATIONS 100  // Higher means more CPU load but faster path calculations.
 // The only version which guarantees the shortest path is 0, 0.
 
+#if defined DEBUG_SINGLE_THREAD_ACCESS || defined _DEBUG
 
+	/** Simple RAII class that is used for checking that no two threads are using an object simultanously.
+	It requires the monitored object to provide the storage for a thread ID.
+	It uses that storage to check if the thread ID of consecutive calls is the same all the time. */
+	class cSingleThreadAccessChecker
+	{
+	public:
+		cSingleThreadAccessChecker(std::thread::id * a_ThreadID) :
+			m_ThreadID(a_ThreadID)
+		{
+			ASSERT(
+				(*a_ThreadID == std::this_thread::get_id()) ||  // Either the object is used by current thread...
+				(*a_ThreadID == m_EmptyThreadID)                // ... or by no thread at all
+			);
+
+			// Mark as being used by this thread:
+			*m_ThreadID = std::this_thread::get_id();
+		}
+
+		~cSingleThreadAccessChecker()
+		{
+			// Mark as not being used by any thread:
+			*m_ThreadID = std::thread::id();
+		}
+
+	protected:
+		/** Points to the storage used for ID of the thread using the object. */
+		std::thread::id * m_ThreadID;
+
+		/** The value of an unassigned thread ID, used to speed up checking. */
+		static std::thread::id m_EmptyThreadID;
+	};
+
+	std::thread::id cSingleThreadAccessChecker::m_EmptyThreadID;
+
+	#define CHECK_THREAD cSingleThreadAccessChecker Checker(&m_ThreadID);
+
+#else
+	#define CHECK_THREAD
+#endif
 
 
 
@@ -32,7 +72,7 @@ bool compareHeuristics::operator()(cPathCell * & a_Cell1, cPathCell * & a_Cell2)
 /* cPath implementation */
 cPath::cPath(
 	cChunk & a_Chunk,
-	const Vector3d & a_StartingPoint, const Vector3d & a_EndingPoint, int a_MaxSteps,
+	const Vector3d & a_StartingPoint, const Vector3d & a_EndingPoint,
 	double a_BoundingBoxWidth, double a_BoundingBoxHeight,
 	int a_MaxUp, int a_MaxDown
 ) :
@@ -67,10 +107,11 @@ cPath::cPath(
 
 	m_NearestPointToTarget = GetCell(m_Source);
 	m_Status = ePathFinderStatus::CALCULATING;
-	m_StepsLeft = a_MaxSteps;
 
-	ProcessCell(GetCell(a_StartingPoint), nullptr, 0);
-	m_Chunk = nullptr;
+	ProcessCell(GetCell(m_Source), nullptr, 0);
+
+	CHECK_THREAD
+	m_AsyncResult = std::async(std::launch::async, &cPath::Step, this, std::ref(a_Chunk));
 }
 
 
@@ -79,6 +120,11 @@ cPath::cPath(
 
 cPath::~cPath()
 {
+	if (m_AsyncResult.valid())
+	{
+		m_AsyncResult.wait();
+	}
+
 	if (m_Status == ePathFinderStatus::CALCULATING)
 	{
 		FinishCalculation();
@@ -89,38 +135,44 @@ cPath::~cPath()
 
 
 
-ePathFinderStatus cPath::Step(cChunk & a_Chunk)
+ePathFinderStatus cPath::GetResultAsync(cChunk & a_Chunk)
 {
-	m_Chunk = &a_Chunk;
-	if (m_Status != ePathFinderStatus::CALCULATING)
+	if (!m_AsyncResult.valid())
 	{
 		return m_Status;
 	}
-
-	if (m_BadChunkFound)
+	else if (m_AsyncResult._Is_ready())
 	{
-		FinishCalculation(ePathFinderStatus::PATH_NOT_FOUND);
-		return m_Status;
-	}
-
-	if (m_StepsLeft == 0)
-	{
-		AttemptToFindAlternative();
+		return m_AsyncResult.get();
 	}
 	else
 	{
-		--m_StepsLeft;
-		int i;
-		for (i = 0; i < CALCULATIONS_PER_STEP; ++i)
-		{
-			if (Step_Internal())  // Step_Internal returns true when no more calculation is needed.
-			{
-				break;  // if we're here, m_Status must have changed either to PATH_FOUND or PATH_NOT_FOUND.
-			}
-		}
-
-		m_Chunk = nullptr;
+		return ePathFinderStatus::CALCULATING;
 	}
+}
+
+
+
+
+
+ePathFinderStatus cPath::Step(cChunk & a_Chunk)
+{
+	auto Calculations = BASELINE_CALCULATIONS + BASELINE_CALCULATIONS * std::thread::hardware_concurrency();
+	for (unsigned Step = 0; Step != Calculations; ++Step)
+	{
+		if (StepOnce())  // Step_Internal returns true when no more calculation is needed.
+		{
+			return m_Status;  // If we're here, m_Status must have changed either to PATH_FOUND or PATH_NOT_FOUND.
+		}
+		else if (m_BadChunkFound)
+		{
+			FinishCalculation(ePathFinderStatus::PATH_NOT_FOUND);
+			m_Chunk = nullptr;
+			return m_Status;
+		}
+	}
+	AttemptToFindAlternative();
+	m_Chunk = nullptr;
 	return m_Status;
 }
 
@@ -179,7 +231,7 @@ bool cPath::IsSolid(const Vector3i & a_Location)
 
 
 
-bool cPath::Step_Internal()
+bool cPath::StepOnce()
 {
 	cPathCell * CurrentCell = OpenListPop();
 
