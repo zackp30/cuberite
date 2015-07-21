@@ -3027,7 +3027,7 @@ void cProtocol172::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 	}
 
 	a_Pkt.WriteBEUInt8(0x66);
-	a_Pkt.WriteBEFloat(a_Mob.GetHealth());
+	a_Pkt.WriteBEFloat(static_cast<float>(a_Mob.GetHealth()));
 
 	switch (a_Mob.GetMobType())
 	{
