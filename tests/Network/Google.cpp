@@ -21,7 +21,7 @@ class cHTTPConnectCallbacks:
 	virtual void OnConnected(cTCPLink & a_Link) override
 	{
 		LOGD("Connected, sending HTTP GET");
-		if (!a_Link.Send("GET / HTTP/1.0\r\nHost:google.com\r\n\r\n"))
+		if (!a_Link.Send("GET / HTTP/1.0\r\nHost:www.google.com\r\n\r\n"))
 		{
 			LOGWARNING("Sending HTTP GET failed");
 		}
@@ -101,8 +101,8 @@ static void DoTest(void)
 {
 	cEvent evtFinish;
 
-	LOGD("Network test: Connecting to google.com:80, reading front page via HTTP.");
-	if (!cNetwork::Connect("google.com", 80, std::make_shared<cHTTPConnectCallbacks>(evtFinish), std::make_shared<cDumpCallbacks>(evtFinish)))
+	LOGD("Network test: Connecting to www.google.com:80, reading front page via HTTP.");
+	if (!cNetwork::Connect("www.google.com", 80, std::make_shared<cHTTPConnectCallbacks>(evtFinish), std::make_shared<cDumpCallbacks>(evtFinish)))
 	{
 		LOGWARNING("Cannot queue connection to google.com");
 		abort();
